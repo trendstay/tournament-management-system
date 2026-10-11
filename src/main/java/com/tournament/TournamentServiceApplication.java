@@ -1,4 +1,4 @@
-package org.example.tournament_service;
+package com.tournament;
 
 import org.springframework.boot.SpringApplication;
 import org.springframework.boot.autoconfigure.SpringBootApplication;
@@ -11,3 +11,8 @@ public class TournamentServiceApplication {
     }
 
 }
+
+
+
+
+
