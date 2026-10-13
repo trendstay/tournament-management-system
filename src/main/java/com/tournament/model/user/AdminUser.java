@@ -2,6 +2,10 @@ package com.tournament.model.user;
 
 import com.tournament.model.enums.UserRole;
 
+/**
+ * Класс пользователя с ролью "Администратор".
+ * Имеет максимальные привилегии в системе.
+ */
 public class AdminUser extends User {
 
     public AdminUser() {

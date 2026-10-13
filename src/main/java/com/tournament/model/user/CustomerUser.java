@@ -2,8 +2,12 @@ package com.tournament.model.user;
 
 import com.tournament.model.enums.UserRole;
 
+/**
+ * Класс пользователя с ролью "Игрок/Участник".
+ * Имеет обычные права базового пользователя системы.
+ */
 public class CustomerUser extends User {
-    private String phoneNumber;
+    private String phoneNumber; // Дополнительное поле: номер телефона
 
     public CustomerUser() {
         super();

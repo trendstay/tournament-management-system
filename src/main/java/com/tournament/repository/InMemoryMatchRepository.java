@@ -8,6 +8,9 @@ import java.util.Optional;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.atomic.AtomicLong;
 
+/**
+ * In-Memory реализация репозитория матчей на базе ConcurrentHashMap.
+ */
 public class InMemoryMatchRepository implements MatchRepository {
     private final Map<Long, Match> storage = new ConcurrentHashMap<>();
     private final AtomicLong idGenerator = new AtomicLong(1);

@@ -3,13 +3,15 @@ package com.tournament.service;
 import com.tournament.model.enums.UserRole;
 import com.tournament.model.user.AdminUser;
 import com.tournament.model.user.CustomerUser;
-import com.tournament.model.user.User;
 import com.tournament.repository.InMemoryUserRepository;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
 import static org.junit.jupiter.api.Assertions.*;
 
+/**
+ * Unit-тесты для сервиса пользователей (UserService).
+ */
 class UserServiceTest {
 
     private UserService userService;

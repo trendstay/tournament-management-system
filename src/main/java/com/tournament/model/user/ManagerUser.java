@@ -2,6 +2,10 @@ package com.tournament.model.user;
 
 import com.tournament.model.enums.UserRole;
 
+/**
+ * Класс пользователя с ролью "Менеджер".
+ * Может создавать турниры, но не может управлять учетными записями других пользователей.
+ */
 public class ManagerUser extends User {
 
     public ManagerUser() {

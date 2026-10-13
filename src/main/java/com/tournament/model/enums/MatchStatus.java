@@ -1,8 +1,11 @@
 package com.tournament.model.enums;
 
+/**
+ * Перечисление возможных жизненных циклов (статусов) спортивного матча.
+ */
 public enum MatchStatus {
-    SCHEDULED,
-    IN_PROGRESS,
-    FINISHED,
-    CANCELLED
+    SCHEDULED,   // Запланирован
+    IN_PROGRESS, // В процессе проведения
+    FINISHED,    // Успешно завершен
+    CANCELLED    // Отменен
 }

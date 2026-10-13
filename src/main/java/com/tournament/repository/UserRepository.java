@@ -4,6 +4,10 @@ import com.tournament.model.user.User;
 import java.util.List;
 import java.util.Optional;
 
+/**
+ * Интерфейс доступа к данным пользователей.
+ * Реализует паттерн Repository для соблюдения принципа единственной ответственности (SRP).
+ */
 public interface UserRepository {
     User save(User user);
     Optional<User> findById(Long id);

@@ -8,6 +8,9 @@ import com.tournament.repository.UserRepository;
 
 import java.util.List;
 
+/**
+ * Сервис управления пользователями и бизнес-валидации данных.
+ */
 public class UserService {
     private final UserRepository userRepository;
 

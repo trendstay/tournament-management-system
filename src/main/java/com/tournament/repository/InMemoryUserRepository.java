@@ -8,6 +8,9 @@ import java.util.Optional;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.atomic.AtomicLong;
 
+/**
+ * In-Memory реализация репозитория пользователей на базе потокобезопасной структуры ConcurrentHashMap.
+ */
 public class InMemoryUserRepository implements UserRepository {
     private final Map<Long, User> usersMap = new ConcurrentHashMap<>();
     private final AtomicLong idGenerator = new AtomicLong(1);
@@ -29,7 +32,7 @@ public class InMemoryUserRepository implements UserRepository {
     @Override
     public Optional<User> findByEmail(String email) {
         return usersMap.values().stream()
-                .filter(u -> u.getEmail() != null && u.getEmail().equalsIgnoreCase(email))
+                .filter(user -> user.getEmail() != null && user.getEmail().equalsIgnoreCase(email))
                 .findFirst();
     }
 
