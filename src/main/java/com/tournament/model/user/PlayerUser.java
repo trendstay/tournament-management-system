@@ -3,21 +3,26 @@ package com.tournament.model.user;
 import com.tournament.model.enums.UserRole;
 
 /**
- * Класс пользователя с ролью "Игрок/Участник".
+ * Игрок турнира и пользователь системы.
  * Имеет обычные права базового пользователя системы.
  */
-public class CustomerUser extends User {
-    private String phoneNumber; // Дополнительное поле: номер телефона
+public class PlayerUser extends User {
+    private String phoneNumber;
+    private boolean captain; // Номер телефона игрока
 
-    public CustomerUser() {
+    public PlayerUser() {
         super();
         this.role = UserRole.PLAYER;
     }
 
-    public CustomerUser(Long id, String email, String passwordHash, String firstName, String lastName, String phoneNumber) {
+    public PlayerUser(Long id, String email, String passwordHash, String firstName, String lastName, String phoneNumber) {
         super(id, email, passwordHash, firstName, lastName, UserRole.PLAYER);
         this.phoneNumber = phoneNumber;
     }
+
+    public boolean isCaptain() { return captain; }
+
+    public void setCaptain(boolean captain) { this.captain = captain; }
 
     public String getPhoneNumber() {
         return phoneNumber;

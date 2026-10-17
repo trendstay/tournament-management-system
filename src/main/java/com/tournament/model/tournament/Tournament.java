@@ -2,6 +2,7 @@ package com.tournament.model.tournament;
 
 import com.tournament.model.enums.SportType;
 import com.tournament.model.team.Team;
+import com.tournament.model.user.RefereeUser;
 
 import java.math.BigDecimal;
 import java.time.LocalDate;
@@ -18,6 +19,7 @@ public class Tournament {
     private LocalDate endDate;       // Дата окончания
     private BigDecimal prizePool;    // Призовой фонд
     private List<Team> teams = new ArrayList<>();
+    private RefereeUser referee;
 
     public Tournament() {}
 
@@ -90,4 +92,6 @@ public class Tournament {
     public void setPrizePool(BigDecimal prizePool) { this.prizePool = prizePool; }
 
     public List<Team> getTeams() { return teams; }
+    public RefereeUser getReferee() { return referee; }
+    public void setReferee(RefereeUser referee) { this.referee = referee; }
 }

@@ -5,7 +5,7 @@ import com.tournament.model.match.Match;
 import com.tournament.model.team.Team;
 import com.tournament.model.tournament.Tournament;
 import com.tournament.model.user.AdminUser;
-import com.tournament.model.user.CustomerUser;
+import com.tournament.model.user.PlayerUser;
 import com.tournament.model.user.ManagerUser;
 import com.tournament.repository.InMemoryMatchRepository;
 import com.tournament.repository.InMemoryUserRepository;
@@ -39,7 +39,7 @@ public class TournamentServiceApplication {
         // 1. Создание пользователей
         AdminUser admin = userService.registerAdmin("admin@tournament.com", "pass123", "Иван", "Администратор");
         ManagerUser manager = userService.registerManager("manager@tournament.com", "pass123", "Петр", "Менеджер");
-        CustomerUser player1 = userService.registerCustomer("player1@tournament.com", "pass123", "Алексей", "Игроков", "+79991234567");
+        PlayerUser player1 = userService.registerPlayer("player1@tournament.com", "pass123", "Алексей", "Игроков", "+79991234567");
 
         // 2. Демонстрация турниров по РАЗНЫМ видам спорта
         Tournament footballTournament = new Tournament(1L, "Осенний Кубок", SportType.FOOTBALL,

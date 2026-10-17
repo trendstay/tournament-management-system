@@ -1,9 +1,6 @@
 package com.tournament.service;
 
-import com.tournament.model.user.AdminUser;
-import com.tournament.model.user.CustomerUser;
-import com.tournament.model.user.ManagerUser;
-import com.tournament.model.user.User;
+import com.tournament.model.user.*;
 import com.tournament.repository.UserRepository;
 
 import java.util.List;
@@ -24,16 +21,38 @@ public class UserService {
         return (AdminUser) userRepository.save(admin);
     }
 
+    public CoachUser registerCoach(
+            String email,
+            String password,
+            String firstName,
+            String lastName
+    ) {
+        validateEmail(email);
+        CoachUser coach = new CoachUser(null, email, password, firstName, lastName);
+        return (CoachUser) userRepository.save(coach);
+    }
+
+    public RefereeUser registerReferee(
+            String email,
+            String password,
+            String firstName,
+            String lastName
+    ) {
+        validateEmail(email);
+        RefereeUser referee = new RefereeUser(null, email, password, firstName, lastName);
+        return (RefereeUser) userRepository.save(referee);
+    }
+
     public ManagerUser registerManager(String email, String password, String firstName, String lastName) {
         validateEmail(email);
         ManagerUser manager = new ManagerUser(null, email, password, firstName, lastName);
         return (ManagerUser) userRepository.save(manager);
     }
 
-    public CustomerUser registerCustomer(String email, String password, String firstName, String lastName, String phone) {
+    public PlayerUser registerPlayer(String email, String password, String firstName, String lastName, String phone) {
         validateEmail(email);
-        CustomerUser customer = new CustomerUser(null, email, password, firstName, lastName, phone);
-        return (CustomerUser) userRepository.save(customer);
+        PlayerUser customer = new PlayerUser(null, email, password, firstName, lastName, phone);
+        return (PlayerUser) userRepository.save(customer);
     }
 
     public User findById(Long id) {
