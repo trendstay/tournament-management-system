@@ -8,7 +8,7 @@ import com.tournament.model.enums.UserRole;
  */
 public class PlayerUser extends User {
     private String phoneNumber;
-    private boolean captain; // Номер телефона игрока
+    private boolean captain;
 
     public PlayerUser() {
         super();

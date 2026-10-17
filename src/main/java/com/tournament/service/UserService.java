@@ -51,8 +51,8 @@ public class UserService {
 
     public PlayerUser registerPlayer(String email, String password, String firstName, String lastName, String phone) {
         validateEmail(email);
-        PlayerUser customer = new PlayerUser(null, email, password, firstName, lastName, phone);
-        return (PlayerUser) userRepository.save(customer);
+        PlayerUser player = new PlayerUser(null, email, password, firstName, lastName, phone);
+        return (PlayerUser) userRepository.save(player);
     }
 
     public User findById(Long id) {
