@@ -4,9 +4,7 @@ import com.tournament.model.enums.SportType;
 import com.tournament.model.match.Match;
 import com.tournament.model.team.Team;
 import com.tournament.model.tournament.Tournament;
-import com.tournament.model.user.AdminUser;
-import com.tournament.model.user.PlayerUser;
-import com.tournament.model.user.ManagerUser;
+import com.tournament.model.user.*;
 import com.tournament.repository.InMemoryMatchRepository;
 import com.tournament.repository.InMemoryUserRepository;
 import com.tournament.repository.MatchRepository;
@@ -40,6 +38,8 @@ public class TournamentServiceApplication {
         AdminUser admin = userService.registerAdmin("admin@tournament.com", "pass123", "Иван", "Администратор");
         ManagerUser manager = userService.registerManager("manager@tournament.com", "pass123", "Петр", "Менеджер");
         PlayerUser player1 = userService.registerPlayer("player1@tournament.com", "pass123", "Алексей", "Игроков", "+79991234567");
+        CoachUser coach = userService.registerCoach("coach@tournament.com", "pass123", "Сергей", "Тренеров");
+        RefereeUser referee = userService.registerReferee("referee@tournament.com", "pass123", "Николай", "Судьин");
 
         // 2. Демонстрация турниров по РАЗНЫМ видам спорта
         Tournament footballTournament = new Tournament(1L, "Осенний Кубок", SportType.FOOTBALL,
@@ -55,6 +55,11 @@ public class TournamentServiceApplication {
         Team teamB = new Team(2L, "Спартак", "Москва");
         footballTournament.addTeam(teamA);
         footballTournament.addTeam(teamB);
+        footballTournament.setReferee(referee);
+
+        teamA.setCoach(coach);
+        teamA.addPlayer(player1);
+        teamA.setCaptain(player1);
 
         // 3. Вывод турнирной таблицы
         System.out.println("\n" + footballTournament.generateStandingsTable());

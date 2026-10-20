@@ -20,9 +20,14 @@ public class PlayerUser extends User {
         this.phoneNumber = phoneNumber;
     }
 
-    public boolean isCaptain() { return captain; }
+    public boolean isCaptain() {
+        return captain;
+    }
 
-    public void setCaptain(boolean captain) { this.captain = captain; }
+    public void setCaptain(boolean captain) {
+        this.captain = captain;
+        this.role = captain ? UserRole.CAPTAIN : UserRole.PLAYER;
+    }
 
     public String getPhoneNumber() {
         return phoneNumber;

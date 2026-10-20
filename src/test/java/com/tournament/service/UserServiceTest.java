@@ -59,11 +59,11 @@ class UserServiceTest {
 
     @Test
     void testRegisterPlayer_ShouldCreatePlayer() {
-        PlayerUser customer = userService.registerPlayer("player@test.com", "pass123", "Петр", "Петров", "+79990000000");
+        PlayerUser player = userService.registerPlayer("player@test.com", "pass123", "Петр", "Петров", "+79990000000");
 
-        assertNotNull(customer.getId());
-        assertEquals(UserRole.PLAYER, customer.getRole());
-        assertFalse(customer.canCreateTournament());
+        assertNotNull(player.getId());
+        assertEquals(UserRole.PLAYER, player.getRole());
+        assertFalse(player.canCreateTournament());
     }
 
     @Test

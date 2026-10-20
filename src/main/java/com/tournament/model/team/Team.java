@@ -14,6 +14,7 @@ public class Team {
     private String city;  // Город базирования
 
     private CoachUser coach;
+    private PlayerUser captain;
     private List<PlayerUser> players = new ArrayList<>();
 
     public Team() {}
@@ -29,6 +30,24 @@ public class Team {
 
     public String getName() { return name; }
     public void setName(String name) { this.name = name; }
+
+    public PlayerUser getCaptain() {
+        return captain;
+    }
+
+    public void setCaptain(PlayerUser captain) {
+        if (captain == null) {
+            throw new IllegalArgumentException("Капитан не может быть null");
+        }
+        if (!players.contains(captain)) {
+            players.add(captain);
+        }
+        if (this.captain != null && this.captain != captain) {
+            this.captain.setCaptain(false);
+        }
+        captain.setCaptain(true);
+        this.captain = captain;
+    }
 
     public CoachUser getCoach() { return coach; }
     public void setCoach(CoachUser coach) { this.coach = coach; }
