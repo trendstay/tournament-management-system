@@ -1,41 +1,38 @@
 package com.tournament.repository;
 
+import com.tournament.model.enums.MatchStatus;
 import com.tournament.model.match.Match;
-import java.util.ArrayList;
+
 import java.util.List;
-import java.util.Map;
-import java.util.Optional;
-import java.util.concurrent.ConcurrentHashMap;
-import java.util.concurrent.atomic.AtomicLong;
 
 /**
- * In-Memory реализация репозитория матчей на базе ConcurrentHashMap.
+ * In-memory реализация репозитория матчей.
  */
-public class InMemoryMatchRepository implements MatchRepository {
-    private final Map<Long, Match> storage = new ConcurrentHashMap<>();
-    private final AtomicLong idGenerator = new AtomicLong(1);
+public class InMemoryMatchRepository extends AbstractInMemoryRepository<Match> implements MatchRepository {
 
     @Override
-    public Match save(Match match) {
-        if (match.getId() == null) {
-            match.setId(idGenerator.getAndIncrement());
+    public List<Match> findByStatus(MatchStatus status) {
+        if (status == null) {
+            return List.of();
         }
-        storage.put(match.getId(), match);
-        return match;
+        return filter(match -> match.getStatus() == status);
     }
 
     @Override
-    public Optional<Match> findById(Long id) {
-        return Optional.ofNullable(storage.get(id));
+    public List<Match> findByTournamentId(Long tournamentId) {
+        if (tournamentId == null) {
+            return List.of();
+        }
+        return filter(match -> match.getTournament() != null
+                && tournamentId.equals(match.getTournament().getId()));
     }
 
     @Override
-    public List<Match> findAll() {
-        return new ArrayList<>(storage.values());
-    }
-
-    @Override
-    public boolean delete(Long id) {
-        return storage.remove(id) != null;
+    public List<Match> findByRefereeId(Long refereeId) {
+        if (refereeId == null) {
+            return List.of();
+        }
+        return filter(match -> match.getReferee() != null
+                && refereeId.equals(match.getReferee().getId()));
     }
 }

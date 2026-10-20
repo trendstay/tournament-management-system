@@ -1,48 +1,38 @@
 package com.tournament.repository;
 
+import com.tournament.model.enums.UserRole;
 import com.tournament.model.user.User;
-import java.util.ArrayList;
+
 import java.util.List;
-import java.util.Map;
 import java.util.Optional;
-import java.util.concurrent.ConcurrentHashMap;
-import java.util.concurrent.atomic.AtomicLong;
 
 /**
- * In-Memory реализация репозитория пользователей на базе потокобезопасной структуры ConcurrentHashMap.
+ * In-memory реализация репозитория пользователей.
  */
-public class InMemoryUserRepository implements UserRepository {
-    private final Map<Long, User> usersMap = new ConcurrentHashMap<>();
-    private final AtomicLong idGenerator = new AtomicLong(1);
-
-    @Override
-    public User save(User user) {
-        if (user.getId() == null) {
-            user.setId(idGenerator.getAndIncrement());
-        }
-        usersMap.put(user.getId(), user);
-        return user;
-    }
-
-    @Override
-    public Optional<User> findById(Long id) {
-        return Optional.ofNullable(usersMap.get(id));
-    }
+public class InMemoryUserRepository extends AbstractInMemoryRepository<User> implements UserRepository {
 
     @Override
     public Optional<User> findByEmail(String email) {
-        return usersMap.values().stream()
-                .filter(user -> user.getEmail() != null && user.getEmail().equalsIgnoreCase(email))
-                .findFirst();
+        if (email == null) {
+            return Optional.empty();
+        }
+        return findFirst(user -> user.getEmail().equalsIgnoreCase(email));
     }
 
     @Override
-    public List<User> findAll() {
-        return new ArrayList<>(usersMap.values());
+    public List<User> findByRole(UserRole role) {
+        if (role == null) {
+            return List.of();
+        }
+        return filter(user -> user.getRole() == role);
     }
 
     @Override
-    public boolean delete(Long id) {
-        return usersMap.remove(id) != null;
+    public List<User> findByLastName(String lastName) {
+        if (lastName == null) {
+            return List.of();
+        }
+        return filter(user -> user.getLastName() != null
+                && user.getLastName().equalsIgnoreCase(lastName));
     }
 }

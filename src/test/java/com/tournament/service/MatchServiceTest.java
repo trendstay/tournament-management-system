@@ -1,58 +1,108 @@
-package com.tournament.model.match;
+package com.tournament.service;
 
 import com.tournament.model.enums.MatchStatus;
+import com.tournament.model.match.Match;
 import com.tournament.model.team.Team;
+import com.tournament.repository.InMemoryMatchRepository;
+import com.tournament.support.TestFixtures;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
-import java.time.LocalDateTime;
-import static org.junit.jupiter.api.Assertions.*;
 
-class MatchTest {
-    private Match match;
+import java.time.LocalDateTime;
+import java.util.ArrayList;
+import java.util.List;
+
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertThrows;
+import static org.junit.jupiter.api.Assertions.assertTrue;
+
+/**
+ * Unit-тесты сервиса матчей, включая многопоточную обработку коллекции.
+ */
+class MatchServiceTest {
+
+    private MatchService matchService;
     private Team homeTeam;
     private Team awayTeam;
 
     @BeforeEach
     void setUp() {
-        homeTeam = new Team(1L, "Зенит", "СПб");
-        awayTeam = new Team(2L, "Спартак", "Москва");
-        match = new Match(1L, homeTeam, awayTeam, LocalDateTime.now());
+        matchService = new MatchService(new InMemoryMatchRepository());
+        homeTeam = TestFixtures.team("Зенит");
+        awayTeam = TestFixtures.team("Спартак");
     }
 
     @Test
-    void testUpdateScore_ValidScore_ShouldParseGoalsCorrectly() {
-        match.updateScore("2:1");
-        assertEquals("2:1", match.getScore());
-        assertEquals(2, match.getHomeGoals());
-        assertEquals(1, match.getAwayGoals());
+    void scheduleMatch_shouldAssignIdentifierAndSaveMatch() {
+        Match match = new Match(homeTeam, awayTeam, LocalDateTime.now(), null, null);
+
+        Match savedMatch = matchService.scheduleMatch(match);
+
+        assertNotNull(savedMatch.getId());
+        assertEquals(1, matchService.findAll().size());
     }
 
     @Test
-    void testUpdateScore_InvalidScore_ShouldThrowException() {
-        IllegalArgumentException exception = assertThrows(IllegalArgumentException.class, () -> {
-            match.updateScore("invalid-score");
-        });
-        assertTrue(exception.getMessage().contains("Некорректный формат счета"));
+    void finishMatch_shouldSetScoreAndStatus() {
+        Match match = matchService.scheduleMatch(
+                new Match(homeTeam, awayTeam, LocalDateTime.now(), null, null));
+
+        Match finishedMatch = matchService.finishMatch(match.getId(), "3:1");
+
+        assertEquals("3:1", finishedMatch.getScore());
+        assertEquals(MatchStatus.FINISHED, finishedMatch.getStatus());
+        assertEquals(1, matchService.findByStatus(MatchStatus.FINISHED).size());
     }
 
     @Test
-    void testGetWinner_WhenHomeTeamWins_ShouldReturnHomeTeam() {
-        match.updateScore("3:0");
-        match.setStatus(MatchStatus.FINISHED);
+    void finishMatch_whenMatchDoesNotExist_shouldThrowException() {
+        IllegalArgumentException exception = assertThrows(IllegalArgumentException.class,
+                () -> matchService.finishMatch(999L, "1:0"));
 
-        assertEquals(homeTeam, match.getWinner());
+        assertTrue(exception.getMessage().contains("не найден"));
     }
 
     @Test
-    void testGenerateMatchReport_ShouldContainKeyInformation() {
-        match.updateScore("1:1");
-        match.setStatus(MatchStatus.FINISHED);
+    void processMatchesConcurrently_shouldProcessWholeCollection() {
+        List<Match> matches = createMatches(5);
 
-        String report = match.generateMatchReport();
+        MatchProcessingReport report = matchService.processMatchesConcurrently(matches);
 
-        assertNotNull(report);
-        assertTrue(report.contains("Зенит vs Спартак"));
-        assertTrue(report.contains("1:1"));
-        assertTrue(report.contains("Зафиксирована ничья"));
+        assertEquals(5, report.getProcessedMatches());
+        assertEquals(5, matchService.findByStatus(MatchStatus.FINISHED).size());
+    }
+
+    @Test
+    void processMatchesConcurrently_shouldUseSeveralNamedThreads() {
+        List<Match> matches = createMatches(5);
+
+        MatchProcessingReport report = matchService.processMatchesConcurrently(matches);
+
+        assertTrue(report.getWorkerThreadNames().size() >= 2,
+                "Ожидалось не менее двух потоков, но были: " + report.getWorkerThreadNames());
+        for (String threadName : report.getWorkerThreadNames()) {
+            assertTrue(threadName.startsWith("match-worker-"),
+                    "Неожиданное имя потока: " + threadName);
+        }
+        assertTrue(report.getDurationMillis() >= 0);
+    }
+
+    @Test
+    void processMatchesConcurrently_whenCollectionIsEmpty_shouldReturnEmptyReport() {
+        MatchProcessingReport report = matchService.processMatchesConcurrently(new ArrayList<>());
+
+        assertEquals(0, report.getProcessedMatches());
+        assertTrue(report.getWorkerThreadNames().isEmpty());
+    }
+
+    private List<Match> createMatches(int count) {
+        List<Match> matches = new ArrayList<>();
+        for (int index = 0; index < count; index++) {
+            Match match = new Match(homeTeam, awayTeam, LocalDateTime.now().plusDays(index));
+            matchService.scheduleMatch(match);
+            matches.add(match);
+        }
+        return matches;
     }
 }

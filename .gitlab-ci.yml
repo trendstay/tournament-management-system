@@ -1,5 +1,12 @@
 image: maven:3-openjdk-17
 
+# Раннер в GitLab-инстансе университета запускает job'ы только на узлах
+# с этим тегом. Без default.tags пайплайн уходит в вечный backoff.
+default:
+  tags:
+    - k8s-internal
+  interruptible: true
+
 variables:
   MAVEN_CLI_OPTS: >-
     --batch-mode
@@ -9,15 +16,29 @@ variables:
     --no-transfer-progress
     -DinstallAtEnd=true
     -DdeployAtEnd=true
+  # Кэш Maven должен лежать внутри каталога проекта, иначе GitLab его не сохранит.
+  MAVEN_OPTS: "-Dmaven.repo.local=$CI_PROJECT_DIR/.m2/repository"
 
 cache:
+  key:
+    files:
+      - pom.xml
   paths:
     - .m2/repository
+
+stages:
+  - test
 
 .verify:
   stage: test
   script:
-    - 'mvn $MAVEN_CLI_OPTS verify'
+    - ./scripts/check-no-var.sh
+    - 'mvn $MAVEN_CLI_OPTS clean verify'
+  artifacts:
+    when: always
+    expire_in: 1 week
+    reports:
+      junit: target/surefire-reports/TEST-*.xml
 
 verify:
   extends:
