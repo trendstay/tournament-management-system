@@ -99,7 +99,7 @@ class MatchServiceTest {
     private List<Match> createMatches(int count) {
         List<Match> matches = new ArrayList<>();
         for (int index = 0; index < count; index++) {
-            Match match = new Match(homeTeam, awayTeam, LocalDateTime.now().plusDays(index));
+            Match match = new Match(null, homeTeam, awayTeam, LocalDateTime.now().plusDays(index));
             matchService.scheduleMatch(match);
             matches.add(match);
         }
