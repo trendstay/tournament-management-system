@@ -1,0 +1,297 @@
+### 1. Тренер
+POST http://localhost:8080/api/users
+Content-Type: application/json
+
+{
+  "email": "coach@test.com",
+  "password": "pass123",
+  "firstName": "Сергей",
+  "lastName": "Тренеров",
+  "role": "COACH"
+}
+
+###
+### 2. Судья
+POST http://localhost:8080/api/users
+Content-Type: application/json
+
+{
+  "email": "referee@test.com",
+  "password": "pass123",
+  "firstName": "Николай",
+  "lastName": "Судьин",
+  "role": "REFEREE"
+}
+
+###
+### 3. Администратор
+POST http://localhost:8080/api/users
+Content-Type: application/json
+
+{
+  "email": "admin@test.com",
+  "password": "pass123",
+  "firstName": "Иван",
+  "lastName": "Администратор",
+  "role": "ADMIN"
+}
+
+###
+### 4. Игрок (команду привяжем позже, через teamId — см. шаг 6)
+POST http://localhost:8080/api/users
+Content-Type: application/json
+
+{
+  "email": "player@test.com",
+  "password": "pass123",
+  "firstName": "Алексей",
+  "lastName": "Игроков",
+  "role": "PLAYER",
+  "phoneNumber": "+79991234567"
+}
+
+### 5. Зенит (с тренером id=1)
+POST http://localhost:8080/api/teams
+Content-Type: application/json
+
+{
+  "name": "Зенит",
+  "city": "Санкт-Петербург",
+  "coachId": 1
+}
+
+###
+### 6. Спартак (без тренера)
+POST http://localhost:8080/api/teams
+Content-Type: application/json
+
+{
+  "name": "Спартак",
+  "city": "Москва"
+}
+
+### 7. Привязать игрока id=4 к команде id=1
+PUT http://localhost:8080/api/users/4
+Content-Type: application/json
+
+{
+  "email": "player@test.com",
+  "firstName": "Алексей",
+  "lastName": "Игроков",
+  "role": "PLAYER",
+  "phoneNumber": "+79991234567",
+  "teamId": 1
+}
+
+### 8. Добавить игрока в состав
+POST http://localhost:8080/api/teams/1/players/4
+
+### 9. Капитан команды
+PUT http://localhost:8080/api/teams/1/captain
+Content-Type: application/json
+
+{
+  "playerId": 4
+}
+
+### 10. Создать турнир
+POST http://localhost:8080/api/tournaments
+Content-Type: application/json
+
+{
+  "title": "Осенний Кубок",
+  "sportType": "FOOTBALL",
+  "startDate": "2026-12-01",
+  "endDate": "2026-12-10",
+  "prizePool": 50000,
+  "refereeId": 2,
+  "teamIds": [1, 2]
+}
+
+### 11. Матч между командами
+POST http://localhost:8080/api/matches
+Content-Type: application/json
+
+{
+  "homeTeamId": 1,
+  "awayTeamId": 2,
+  "tournamentId": 1,
+  "matchDate": "2026-12-02T18:00:00",
+  "score": "0:0"
+}
+
+### 12. Завершить матч со счётом 3:1
+PUT http://localhost:8080/api/matches/1/finish
+Content-Type: application/json
+
+{
+  "score": "3:1"
+}
+
+### 13. Зарегистрировать команду в турнире
+POST http://localhost:8080/api/tournaments/1/teams
+Content-Type: application/json
+
+{
+  "teamId": 2
+}
+
+###
+### 14. Турнирная таблица
+GET http://localhost:8080/api/tournaments/1/standings
+
+### 15. Обработать пачку матчей многопоточно
+POST http://localhost:8080/api/matches/process
+Content-Type: application/json
+
+{
+  "matchIds": [1]
+}
+
+### 16. Все пользователи
+GET http://localhost:8080/api/users
+
+###
+### 17. Пользователь по id
+GET http://localhost:8080/api/users/1
+
+###
+### 18. Пользователь по email
+GET http://localhost:8080/api/users/email/coach@test.com
+
+###
+### 19. Фильтр: только тренеры
+GET http://localhost:8080/api/users/search?role=COACH
+
+###
+### 20. Фильтр: по фамилии
+GET http://localhost:8080/api/users/search?lastName=Трен
+
+###
+### 21. Фильтр: роль + фамилия одновременно
+GET http://localhost:8080/api/users/search?role=COACH&lastName=Трен
+
+###
+### 22. Состав команды
+GET http://localhost:8080/api/teams/1/players
+
+###
+### 23. Фильтр команд по городу
+GET http://localhost:8080/api/teams/search?city=Москва
+
+###
+### 24. Фильтр команд по тренеру
+GET http://localhost:8080/api/teams/search?coachId=1
+
+###
+### 25. Фильтр турниров по виду спорта
+GET http://localhost:8080/api/tournaments/search?sportType=FOOTBALL
+
+###
+### 26. Фильтр турниров по периоду дат
+GET http://localhost:8080/api/tournaments/search?startFrom=2026-01-01&startTo=2026-12-31
+
+###
+### 27. Фильтр турниров по судье
+GET http://localhost:8080/api/tournaments/search?refereeId=2
+
+###
+### 28. Фильтр матчей по статусу
+GET http://localhost:8080/api/matches/search?status=FINISHED
+
+###
+### 29. Фильтр матчей по турниру
+GET http://localhost:8080/api/matches/search?tournamentId=1
+
+###
+### 30. Фильтр матчей по команде
+GET http://localhost:8080/api/matches/search?teamId=1
+
+###
+### 31. Фильтр матчей по периоду
+GET http://localhost:8080/api/matches/search?from=2026-12-01T00:00:00&to=2026-12-31T23:59:59
+
+### 32. Дубликат email → ошибка 500, запись не создаётся
+POST http://localhost:8080/api/users
+Content-Type: application/json
+
+{
+  "email": "coach@test.com",
+  "password": "pass123",
+  "firstName": "Другой",
+  "lastName": "Человек",
+  "role": "COACH"
+}
+
+###
+### 33. Пустое тело → 400 от @Valid
+POST http://localhost:8080/api/users
+Content-Type: application/json
+
+{
+  "firstName": "Без Email"
+}
+
+###
+### 34. Короткий пароль → 400
+POST http://localhost:8080/api/users
+Content-Type: application/json
+
+{
+  "email": "short@test.com",
+  "password": "123",
+  "firstName": "Короткий",
+  "lastName": "Пароль",
+  "role": "PLAYER"
+}
+
+###
+### 35. Команда сама с собой → ошибка
+POST http://localhost:8080/api/matches
+Content-Type: application/json
+
+{
+  "homeTeamId": 1,
+  "awayTeamId": 1
+}
+
+###
+### 36. Тренер в роли судьи турнира → ошибка
+POST http://localhost:8080/api/tournaments
+Content-Type: application/json
+
+{
+  "title": "Неправильный Кубок",
+  "sportType": "HOCKEY",
+  "refereeId": 1
+}
+
+###
+### 37. Несуществующая команда → ошибка
+POST http://localhost:8080/api/matches
+Content-Type: application/json
+
+{
+  "homeTeamId": 999,
+  "awayTeamId": 2
+}
+
+### 38. Удалить несуществующего пользователя → ошибка
+DELETE http://localhost:8080/api/users/999
+
+###
+### 39. Удалить игрока, который капитаном не является — ошибка запрета
+DELETE http://localhost:8080/api/users/4
+
+###
+### 40. Создать свободного игрока и удалить его
+POST http://localhost:8080/api/users
+Content-Type: application/json
+
+{
+  "email": "temp@test.com",
+  "password": "pass123",
+  "firstName": "Временный",
+  "lastName": "Игрок",
+  "role": "PLAYER"
+}
