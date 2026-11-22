@@ -1,4 +1,7 @@
 package com.tournament.service.impl;
+import com.tournament.exception.BusinessRuleException;
+import com.tournament.exception.NotFoundException;
+import com.tournament.exception.ValidationException;
 import com.tournament.dto.match.BatchMatchRequest;
 import com.tournament.dto.match.FinishMatchRequest;
 import com.tournament.dto.match.MatchFilter;
@@ -60,7 +63,8 @@ public class MatchServiceImpl extends AbstractCrudService<Match, MatchRequest, M
             return matchMapper.toResponseList(matchRepository.findByTeamId(filter.getTeamId()));
         }
         if (filter.getFrom() == null || filter.getTo() == null) {
-            throw new IllegalArgumentException("Для фильтра по дате укажите обе границы: from и to");
+            throw new ValidationException("Для фильтра по дате необходимы обе границы: from и to",
+                    "Передайте начальную и конечную дату; например, from=2026-01-01T00:00:00 и to=2026-12-31T23:59:59");
         }
         return matchMapper.toResponseList(matchRepository.findByMatchDateBetween(filter.getFrom(), filter.getTo()));
     }
@@ -68,6 +72,15 @@ public class MatchServiceImpl extends AbstractCrudService<Match, MatchRequest, M
     public MatchResponse finishMatch(Long matchId, FinishMatchRequest request) {
         Match match = findEntity(matchId);
         match.updateScore(request.getScore());
+        Tournament tournament = match.getTournament();
+        if (tournament != null && tournament.getSportType() != null
+                && !tournament.getSportType().isAllowsDraw() && match.isDraw()) {
+            throw new BusinessRuleException(
+                    "Ничья недопустима в дисциплине " + tournament.getSportType().getDisplayName()
+                            + " для матча с ID " + matchId,
+                    "Измените счёт или назначьте дополнительное время согласно правилам дисциплины",
+                    "DRAW_NOT_ALLOWED");
+        }
         match.setStatus(MatchStatus.FINISHED);
         return toResponse(matchRepository.save(match));
     }
@@ -114,7 +127,10 @@ public class MatchServiceImpl extends AbstractCrudService<Match, MatchRequest, M
         Team homeTeam = findTeam(request.getHomeTeamId());
         Team awayTeam = findTeam(request.getAwayTeamId());
         if (homeTeam.getId().equals(awayTeam.getId())) {
-            throw new IllegalArgumentException("Команда не может играть сама с собой");
+            throw new BusinessRuleException(
+                    "Команда с ID " + homeTeam.getId() + " не может играть сама с собой",
+                    "Укажите две разные команды для матча",
+                    "MATCH_TEAMS_MUST_DIFFER");
         }
         Match match = new Match(null, homeTeam, awayTeam, request.getMatchDate());
         match.setTournament(findTournament(request.getTournamentId()));
@@ -128,7 +144,10 @@ public class MatchServiceImpl extends AbstractCrudService<Match, MatchRequest, M
         Team homeTeam = findTeam(request.getHomeTeamId());
         Team awayTeam = findTeam(request.getAwayTeamId());
         if (homeTeam.getId().equals(awayTeam.getId())) {
-            throw new IllegalArgumentException("Команда не может играть сама с собой");
+            throw new BusinessRuleException(
+                    "Команда с ID " + homeTeam.getId() + " не может играть сама с собой",
+                    "Укажите две разные команды для матча",
+                    "MATCH_TEAMS_MUST_DIFFER");
         }
         entity.setHomeTeam(homeTeam);
         entity.setAwayTeam(awayTeam);
@@ -146,19 +165,20 @@ public class MatchServiceImpl extends AbstractCrudService<Match, MatchRequest, M
         try {
             return MatchStatus.valueOf(status.trim().toUpperCase());
         } catch (IllegalArgumentException exception) {
-            throw new IllegalArgumentException("Неизвестный статус матча: " + status);
+            throw new ValidationException("Неизвестный статус матча: " + status,
+                    "Используйте один из статусов: SCHEDULED, IN_PROGRESS, FINISHED или CANCELLED");
         }
     }
     private Team findTeam(Long teamId) {
         return teamRepository.findById(teamId)
-                .orElseThrow(() -> new IllegalArgumentException("Команда с ID " + teamId + " не найдена"));
+                .orElseThrow(() -> new NotFoundException("Команда с ID " + teamId + " не найдена"));
     }
     private Tournament findTournament(Long tournamentId) {
         if (tournamentId == null) {
             return null;
         }
         return tournamentRepository.findById(tournamentId)
-                .orElseThrow(() -> new IllegalArgumentException("Турнир с ID " + tournamentId + " не найден"));
+                .orElseThrow(() -> new NotFoundException("Турнир с ID " + tournamentId + " не найден"));
     }
     /**
      * Вспомогательный класс создания пула именованных потоков.

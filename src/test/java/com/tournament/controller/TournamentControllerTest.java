@@ -1,5 +1,6 @@
 package com.tournament.controller;
 import com.tournament.dto.tournament.TournamentRequest;
+import com.tournament.exception.AccessDeniedException;
 import com.tournament.dto.tournament.TournamentResponse;
 import com.tournament.support.AbstractServiceMockSupport;
 import org.junit.jupiter.api.DisplayName;
@@ -85,5 +86,22 @@ class TournamentControllerTest extends AbstractServiceMockSupport {
         mockMvc.perform(get("/api/tournaments/100"))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.id").value(100));
+    }
+    @Test
+    @DisplayName("POST /api/tournaments: операция запрещена и возвращает 403")
+    void create_withForbiddenReferee_shouldReturnForbiddenResponse() throws Exception {
+        when(tournamentService.create(any(TournamentRequest.class))).thenThrow(
+                new AccessDeniedException("назначение судьёй турнира",
+                        "пользователь с ID 1 не является судьёй",
+                        "Выберите пользователя с ролью REFEREE"));
+
+        mockMvc.perform(post("/api/tournaments")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"title\":\"Кубок\",\"sportType\":\"FOOTBALL\","
+                                + "\"refereeId\":1,\"teamIds\":[]}"))
+                .andExpect(status().isForbidden())
+                .andExpect(jsonPath("$.errorCode").value("ACCESS_DENIED"))
+                .andExpect(jsonPath("$.message").value(
+                        "Операция «назначение судьёй турнира» недоступна: пользователь с ID 1 не является судьёй"));
     }
 }

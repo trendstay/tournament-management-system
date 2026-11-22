@@ -1,4 +1,5 @@
 package com.tournament.service.impl;
+import com.tournament.exception.NotFoundException;
 import com.tournament.mapper.DtoMapper;
 import com.tournament.service.CrudService;
 import org.springframework.data.jpa.repository.JpaRepository;
@@ -56,10 +57,10 @@ public abstract class AbstractCrudService<E, REQ, RES> implements CrudService<RE
         E entity = findEntity(id);
         repository.delete(entity);
     }
-    /** Найти сущность или выбросить {@link IllegalArgumentException}, если её нет. */
+    /** Найти сущность или выбросить {@link NotFoundException}, если её нет. */
     protected E findEntity(Long id) {
         return repository.findById(id)
-                .orElseThrow(() -> new IllegalArgumentException(entityNotFoundMessage(id)));
+                .orElseThrow(() -> new NotFoundException(entityNotFoundMessage(id)));
     }
     /** Преобразовать список сущностей в список DTO. */
     protected List<RES> toResponseList(List<E> entities) {

@@ -1,4 +1,6 @@
 package com.tournament.service;
+import com.tournament.exception.BusinessRuleException;
+import com.tournament.exception.ValidationException;
 import com.tournament.dto.match.BatchMatchRequest;
 import com.tournament.dto.match.FinishMatchRequest;
 import com.tournament.dto.match.MatchFilter;
@@ -62,7 +64,7 @@ class MatchServiceImplTest extends AbstractRepositoryMockSupport {
     @DisplayName("create: команда не может играть сама с собой")
     void create_withSameTeams_shouldThrowException() {
         when(teamRepository.findById(1L)).thenReturn(Optional.of(homeTeam));
-        assertThrows(IllegalArgumentException.class,
+        assertThrows(BusinessRuleException.class,
                 () -> matchService.create(new MatchRequest(1L, 1L, null, LocalDateTime.now(), null)));
         verify(matchRepository, never()).save(any(Match.class));
     }
@@ -79,12 +81,43 @@ class MatchServiceImplTest extends AbstractRepositoryMockSupport {
         assertTrue(response.getMatchReport().contains("Победитель — Зенит"));
     }
     @Test
-    @DisplayName("finishMatch: некорректный формат счёта приводит к IllegalArgumentException")
+    @DisplayName("finishMatch: некорректный формат счёта приводит к ValidationException")
     void finishMatch_withInvalidScore_shouldThrowException() {
         Match match = new Match(50L, homeTeam, awayTeam, LocalDateTime.now());
         when(matchRepository.findById(50L)).thenReturn(Optional.of(match));
-        assertThrows(IllegalArgumentException.class,
+        assertThrows(ValidationException.class,
                 () -> matchService.finishMatch(50L, new FinishMatchRequest("три-один")));
+    }
+    @Test
+    @DisplayName("finishMatch: ничья запрещена в баскетболе")
+    void finishMatch_withDrawInBasketball_shouldThrowBusinessRuleException() {
+        Tournament tournament = new Tournament(7L, "Кубок", SportType.BASKETBALL,
+                LocalDate.now(), LocalDate.now().plusDays(5), new BigDecimal("100"));
+        Match match = new Match(50L, homeTeam, awayTeam, LocalDateTime.now());
+        match.setTournament(tournament);
+        when(matchRepository.findById(50L)).thenReturn(Optional.of(match));
+
+        BusinessRuleException exception = assertThrows(BusinessRuleException.class,
+                () -> matchService.finishMatch(50L, new FinishMatchRequest("1:1")));
+
+        assertTrue(exception.getMessage().contains("Баскетбол"));
+        verify(matchRepository, never()).save(any(Match.class));
+    }
+    @Test
+    @DisplayName("finishMatch: ничья разрешена в футболе")
+    void finishMatch_withDrawInFootball_shouldFinishMatch() {
+        Tournament tournament = new Tournament(7L, "Кубок", SportType.FOOTBALL,
+                LocalDate.now(), LocalDate.now().plusDays(5), new BigDecimal("100"));
+        Match match = new Match(50L, homeTeam, awayTeam, LocalDateTime.now());
+        match.setTournament(tournament);
+        when(matchRepository.findById(50L)).thenReturn(Optional.of(match));
+        when(matchRepository.save(any(Match.class))).thenAnswer(invocation -> invocation.getArgument(0));
+
+        MatchResponse response = matchService.finishMatch(50L, new FinishMatchRequest("1:1"));
+
+        assertEquals("FINISHED", response.getStatus());
+        assertTrue(match.isDraw());
+        assertTrue(response.getMatchReport().contains("Зафиксирована ничья"));
     }
     @Test
     @DisplayName("processMatchesConcurrently: пакетно завершает матчи в нескольких потоках")
@@ -120,7 +153,7 @@ class MatchServiceImplTest extends AbstractRepositoryMockSupport {
     void findByFilter_withUnknownStatus_shouldThrowException() {
         MatchFilter filter = new MatchFilter();
         filter.setStatus("UNKNOWN");
-        assertThrows(IllegalArgumentException.class, () -> matchService.findByFilter(filter));
+        assertThrows(ValidationException.class, () -> matchService.findByFilter(filter));
     }
     @Test
     @DisplayName("findByFilter: фильтр по турниру")

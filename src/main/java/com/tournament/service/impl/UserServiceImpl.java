@@ -1,4 +1,9 @@
 package com.tournament.service.impl;
+import com.tournament.exception.AccessDeniedException;
+import com.tournament.exception.BusinessRuleException;
+import com.tournament.exception.ConflictException;
+import com.tournament.exception.NotFoundException;
+import com.tournament.exception.ValidationException;
 import com.tournament.dto.user.UserFilter;
 import com.tournament.dto.user.UserRequest;
 import com.tournament.dto.user.UserResponse;
@@ -64,19 +69,23 @@ public class UserServiceImpl extends AbstractCrudService<User, UserRequest, User
     @Transactional(readOnly = true)
     public UserResponse findByEmail(String email) {
         User user = userRepository.findByEmailIgnoreCase(email)
-                .orElseThrow(() -> new IllegalArgumentException("Пользователь с email " + email + " не найден"));
+                .orElseThrow(() -> new NotFoundException(
+                        "Пользователь с email " + email + " не найден",
+                        "Проверьте введённый email или сначала зарегистрируйте пользователя"));
         return userMapper.toResponse(user);
     }
     @Override
     public void delete(Long id) {
         User user = findEntity(id);
         if (user instanceof PlayerUser && ((PlayerUser) user).isCaptain()) {
-            throw new IllegalArgumentException(
-                    "Нельзя удалить пользователя с ID " + id + ": он является капитаном команды");
+            throw new AccessDeniedException("удаление пользователя",
+                    "пользователь с ID " + id + " является капитаном команды",
+                    "Назначьте другого капитана или снимите капитанство перед удалением пользователя");
         }
         if (!teamRepository.findByCoachId(id).isEmpty()) {
-            throw new IllegalArgumentException(
-                    "Нельзя удалить пользователя с ID " + id + ": он является тренером команды");
+            throw new AccessDeniedException("удаление пользователя",
+                    "пользователь с ID " + id + " является тренером команды",
+                    "Назначьте команде другого тренера перед удалением пользователя");
         }
         userRepository.delete(user);
     }
@@ -84,7 +93,8 @@ public class UserServiceImpl extends AbstractCrudService<User, UserRequest, User
     protected User createEntity(UserRequest request) {
         validateEmailUnique(request.getEmail(), null);
         if (request.getPassword() == null || request.getPassword().isBlank()) {
-            throw new IllegalArgumentException("Пароль обязателен при создании пользователя");
+            throw new ValidationException("Пароль обязателен при создании пользователя",
+                    "Передайте непустой пароль длиной от 6 до 100 символов");
         }
         String passwordHash = request.getPassword();
         User user = userFactory.create(
@@ -121,13 +131,17 @@ public class UserServiceImpl extends AbstractCrudService<User, UserRequest, User
      */
     private void validateEmailUnique(String email, Long currentUserId) {
         if (email == null || !email.contains("@")) {
-            throw new IllegalArgumentException("Некорректный формат email: " + email);
+            throw new ValidationException("Некорректный формат email: " + email,
+                    "Укажите email-адрес с символом @ в допустимом формате");
         }
         boolean emailTaken = userRepository.findByEmailIgnoreCase(email)
                 .filter(existing -> currentUserId == null || !currentUserId.equals(existing.getId()))
                 .isPresent();
         if (emailTaken) {
-            throw new IllegalArgumentException("Пользователь с email " + email + " уже существует");
+            throw new ConflictException(
+                    "Пользователь с email " + email + " уже существует",
+                    "Укажите другой email или откройте существующую учётную запись и измените её",
+                    "USER_EMAIL_EXISTS");
         }
     }
     /**
@@ -142,8 +156,11 @@ public class UserServiceImpl extends AbstractCrudService<User, UserRequest, User
             return;
         }
         if (entity.getRole() != requestedRole) {
-            throw new IllegalArgumentException(
-                    "Смена роли с " + entity.getRole() + " на " + requestedRole + " не поддерживается");
+            throw new BusinessRuleException(
+                    "Смена роли с " + entity.getRole() + " на " + requestedRole
+                            + " не поддерживается: тип пользователя не соответствует новой роли",
+                    "Создайте отдельную учётную запись с нужной ролью; для игрока доступно переключение PLAYER и CAPTAIN",
+                    "USER_ROLE_CHANGE_NOT_SUPPORTED");
         }
     }
     /** Заполнение полей, специфичных для игрока, и привязка к команде. */
@@ -161,7 +178,8 @@ public class UserServiceImpl extends AbstractCrudService<User, UserRequest, User
             return;
         }
         Team team = teamRepository.findById(request.getTeamId())
-                .orElseThrow(() -> new IllegalArgumentException("Команда с ID " + request.getTeamId() + " не найдена"));
+                .orElseThrow(() -> new NotFoundException(
+                        "Команда с ID " + request.getTeamId() + " не найдена"));
         if (currentTeam != null && !currentTeam.getId().equals(team.getId())) {
             currentTeam.removePlayer(player);
         }

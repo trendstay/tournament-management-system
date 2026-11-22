@@ -1,5 +1,6 @@
 package com.tournament.controller;
 import com.tournament.dto.team.TeamResponse;
+import com.tournament.exception.ConflictException;
 import com.tournament.support.AbstractServiceMockSupport;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
@@ -78,5 +79,19 @@ class TeamControllerTest extends AbstractServiceMockSupport {
         mockMvc.perform(delete("/api/teams/10"))
                 .andExpect(status().isNoContent());
         verify(teamService).delete(10L);
+    }
+    @Test
+    @DisplayName("POST /api/teams: конфликт названия возвращает 409")
+    void create_withDuplicateName_shouldReturnConflictResponse() throws Exception {
+        when(teamService.create(any())).thenThrow(new ConflictException(
+                "Команда с названием «Зенит» уже существует",
+                "Укажите другое название команды", "TEAM_NAME_EXISTS"));
+
+        mockMvc.perform(post("/api/teams")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"name\":\"Зенит\",\"city\":\"Москва\"}"))
+                .andExpect(status().isConflict())
+                .andExpect(jsonPath("$.errorCode").value("TEAM_NAME_EXISTS"))
+                .andExpect(jsonPath("$.suggestion").isNotEmpty());
     }
 }

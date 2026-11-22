@@ -1,8 +1,14 @@
 package com.tournament.service;
+import com.tournament.exception.AccessDeniedException;
+import com.tournament.exception.BusinessRuleException;
+import com.tournament.exception.ConflictException;
+import com.tournament.exception.NotFoundException;
 import com.tournament.dto.tournament.TournamentFilter;
 import com.tournament.dto.tournament.TournamentRequest;
 import com.tournament.dto.tournament.TournamentResponse;
+import com.tournament.model.enums.MatchStatus;
 import com.tournament.model.enums.SportType;
+import com.tournament.model.match.Match;
 import com.tournament.model.team.Team;
 import com.tournament.model.tournament.Tournament;
 import com.tournament.model.user.CoachUser;
@@ -14,6 +20,7 @@ import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import java.math.BigDecimal;
 import java.time.LocalDate;
+import java.time.LocalDateTime;
 import java.util.List;
 import java.util.Optional;
 import static org.junit.jupiter.api.Assertions.assertEquals;
@@ -69,7 +76,7 @@ class TournamentServiceImplTest extends AbstractRepositoryMockSupport {
         when(userRepository.findById(2L)).thenReturn(Optional.of(coach));
         TournamentRequest request = new TournamentRequest("Кубок", SportType.FOOTBALL,
                 null, null, null, 2L, List.of());
-        IllegalArgumentException exception = assertThrows(IllegalArgumentException.class,
+        AccessDeniedException exception = assertThrows(AccessDeniedException.class,
                 () -> tournamentService.create(request));
         assertTrue(exception.getMessage().contains("не является судьёй"));
         verify(tournamentRepository, never()).save(any(Tournament.class));
@@ -79,7 +86,7 @@ class TournamentServiceImplTest extends AbstractRepositoryMockSupport {
     void create_withInvalidDates_shouldThrowException() {
         TournamentRequest request = new TournamentRequest("Кубок", SportType.CHESS,
                 LocalDate.of(2026, 5, 10), LocalDate.of(2026, 5, 1), null, null, List.of());
-        assertThrows(IllegalArgumentException.class, () -> tournamentService.create(request));
+        assertThrows(BusinessRuleException.class, () -> tournamentService.create(request));
     }
     @Test
     @DisplayName("registerTeam: добавляет команду в турнир")
@@ -101,7 +108,7 @@ class TournamentServiceImplTest extends AbstractRepositoryMockSupport {
         tournament.addTeam(firstTeam);
         when(tournamentRepository.findById(100L)).thenReturn(Optional.of(tournament));
         when(teamRepository.findById(1L)).thenReturn(Optional.of(firstTeam));
-        assertThrows(IllegalArgumentException.class, () -> tournamentService.registerTeam(100L, 1L));
+        assertThrows(ConflictException.class, () -> tournamentService.registerTeam(100L, 1L));
     }
     @Test
     @DisplayName("unregisterTeam: исключает команду из турнира")
@@ -121,7 +128,7 @@ class TournamentServiceImplTest extends AbstractRepositoryMockSupport {
                 LocalDate.now(), LocalDate.now().plusDays(3), new BigDecimal("1000"));
         when(tournamentRepository.findById(100L)).thenReturn(Optional.of(tournament));
         when(matchRepository.countByTournamentId(100L)).thenReturn(3L);
-        IllegalArgumentException exception = assertThrows(IllegalArgumentException.class,
+        BusinessRuleException exception = assertThrows(BusinessRuleException.class,
                 () -> tournamentService.delete(100L));
         assertTrue(exception.getMessage().contains("матчей — 3"));
         verify(tournamentRepository, never()).delete(any(Tournament.class));
@@ -140,6 +147,32 @@ class TournamentServiceImplTest extends AbstractRepositoryMockSupport {
         assertTrue(table.contains("Спартак"));
     }
     @Test
+    @DisplayName("getStandingsTable: считает очки по завершённым матчам и сортирует команды")
+    void getStandingsTable_shouldCountPointsAndSortTeams() {
+        Tournament tournament = new Tournament(100L, "Кубок", SportType.FOOTBALL,
+                LocalDate.now(), LocalDate.now().plusDays(3), new BigDecimal("1000"));
+        tournament.addTeam(firstTeam);
+        tournament.addTeam(secondTeam);
+
+        Match zenitWin = new Match(1L, firstTeam, secondTeam, LocalDateTime.now());
+        zenitWin.updateScore("2:1");
+        zenitWin.setStatus(MatchStatus.FINISHED);
+        Match draw = new Match(2L, secondTeam, firstTeam, LocalDateTime.now());
+        draw.updateScore("0:0");
+        draw.setStatus(MatchStatus.FINISHED);
+        Match scheduled = new Match(3L, secondTeam, firstTeam, LocalDateTime.now());
+        scheduled.updateScore("5:0");
+
+        when(tournamentRepository.findById(100L)).thenReturn(Optional.of(tournament));
+        when(matchRepository.findByTournamentId(100L)).thenReturn(List.of(zenitWin, draw, scheduled));
+
+        String table = tournamentService.getStandingsTable(100L);
+
+        assertTrue(table.indexOf("Зенит") < table.indexOf("Спартак"));
+        assertTrue(table.contains("2    | 1  | 1  | 0  | 4"));
+        assertTrue(table.contains("2    | 0  | 1  | 1  | 1"));
+    }
+    @Test
     @DisplayName("findByFilter: фильтр по виду спорта")
     void findByFilter_bySportType_shouldUseSportQuery() {
         Tournament tournament = new Tournament(100L, "Dota Major", SportType.E_SPORTS,
@@ -153,9 +186,9 @@ class TournamentServiceImplTest extends AbstractRepositoryMockSupport {
         assertEquals("Киберспорт", tournaments.get(0).getSportDisplayName());
     }
     @Test
-    @DisplayName("findById: отсутствующий турнир приводит к IllegalArgumentException")
+    @DisplayName("findById: отсутствующий турнир приводит к NotFoundException")
     void findById_whenMissing_shouldThrowException() {
         when(tournamentRepository.findById(404L)).thenReturn(Optional.empty());
-        assertThrows(IllegalArgumentException.class, () -> tournamentService.findById(404L));
+        assertThrows(NotFoundException.class, () -> tournamentService.findById(404L));
     }
 }

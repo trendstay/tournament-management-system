@@ -1,4 +1,8 @@
 package com.tournament.service.impl;
+import com.tournament.exception.AccessDeniedException;
+import com.tournament.exception.ConflictException;
+import com.tournament.exception.NotFoundException;
+import com.tournament.exception.ValidationException;
 import com.tournament.dto.team.TeamFilter;
 import com.tournament.dto.team.TeamRequest;
 import com.tournament.dto.team.TeamResponse;
@@ -98,10 +102,16 @@ public class TeamServiceImpl extends AbstractCrudService<Team, TeamRequest, Team
     public void delete(Long id) {
         Team team = findEntity(id);
         if (!team.getPlayers().isEmpty()) {
-            throw new IllegalArgumentException("Нельзя удалить команду с ID " + id + ": в составе есть игроки");
+            throw new ConflictException(
+                    "Нельзя удалить команду с ID " + id + ": в составе есть игроки",
+                    "Сначала уберите всех игроков из состава команды, затем повторите удаление",
+                    "TEAM_HAS_PLAYERS");
         }
         if (matchRepository.existsByHomeTeamIdOrAwayTeamId(id, id)) {
-            throw new IllegalArgumentException("Нельзя удалить команду с ID " + id + ": у неё есть матчи");
+            throw new ConflictException(
+                    "Нельзя удалить команду с ID " + id + ": у неё есть матчи",
+                    "Сначала удалите или перенесите матчи команды, затем повторите удаление",
+                    "TEAM_HAS_MATCHES");
         }
         teamRepository.delete(team);
     }
@@ -126,14 +136,18 @@ public class TeamServiceImpl extends AbstractCrudService<Team, TeamRequest, Team
     /** Название команды должно быть уникальным (без учёта регистра). */
     private void validateNameUnique(String name, Long currentTeamId) {
         if (name == null || name.isBlank()) {
-            throw new IllegalArgumentException("Название команды не может быть пустым");
+            throw new ValidationException("Название команды не может быть пустым",
+                    "Укажите непустое название команды");
         }
         Optional<Team> existingTeam = teamRepository.findByNameIgnoreCase(name);
         boolean nameTaken = existingTeam
                 .filter(team -> currentTeamId == null || !currentTeamId.equals(team.getId()))
                 .isPresent();
         if (nameTaken) {
-            throw new IllegalArgumentException("Команда с названием " + name + " уже существует");
+            throw new ConflictException(
+                    "Команда с названием «" + name + "» уже существует",
+                    "Укажите другое название команды или откройте существующую команду «" + name + "» и измените её",
+                    "TEAM_NAME_EXISTS");
         }
     }
     /** Найти тренера по идентификатору (необязательное поле). */
@@ -142,14 +156,16 @@ public class TeamServiceImpl extends AbstractCrudService<Team, TeamRequest, Team
             return null;
         }
         User user = userRepository.findById(coachId)
-                .orElseThrow(() -> new IllegalArgumentException("Пользователь с ID " + coachId + " не найден"));
+                .orElseThrow(() -> new NotFoundException("Пользователь с ID " + coachId + " не найден"));
         if (!(user instanceof CoachUser)) {
-            throw new IllegalArgumentException("Пользователь с ID " + coachId + " не является тренером");
+            throw new AccessDeniedException("создание команды",
+                    "пользователь с ID " + coachId + " не является тренером",
+                    "Назначьте пользователя с ролью COACH или выберите другого тренера");
         }
         return (CoachUser) user;
     }
     private PlayerUser findPlayer(Long playerId) {
         return playerUserRepository.findById(playerId)
-                .orElseThrow(() -> new IllegalArgumentException("Игрок с ID " + playerId + " не найден"));
+                .orElseThrow(() -> new NotFoundException("Игрок с ID " + playerId + " не найден"));
     }
 }
