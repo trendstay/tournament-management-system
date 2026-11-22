@@ -1,4 +1,5 @@
 package com.tournament.controller;
+import com.tournament.exception.NotFoundException;
 import com.tournament.model.enums.UserRole;
 import com.tournament.dto.user.UserRequest;
 import com.tournament.dto.user.UserResponse;
@@ -56,7 +57,9 @@ class UserControllerTest extends AbstractServiceMockSupport {
                         .contentType(MediaType.APPLICATION_JSON)
                         .content("{\"email\":\"not-an-email\",\"password\":\"pass123\","
                                 + "\"firstName\":\"Сергей\",\"lastName\":\"Тренеров\",\"role\":\"COACH\"}"))
-                .andExpect(status().isBadRequest());
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.errorCode").value("ARGUMENT_VALIDATION_ERROR"))
+                .andExpect(jsonPath("$.details.email").value("некорректный формат email"));
     }
     @Test
     @DisplayName("GET /api/users/{id} возвращает пользователя")
@@ -99,5 +102,40 @@ class UserControllerTest extends AbstractServiceMockSupport {
         mockMvc.perform(delete("/api/users/1"))
                 .andExpect(status().isNoContent());
         verify(userService).delete(1L);
+    }
+    @Test
+    @DisplayName("GET /api/users/{id}: отсутствующий пользователь возвращает 404 с подсказкой")
+    void findById_whenMissing_shouldReturnNotFoundResponse() throws Exception {
+        when(userService.findById(99L)).thenThrow(new NotFoundException("Пользователь с ID 99 не найден"));
+
+        mockMvc.perform(get("/api/users/99"))
+                .andExpect(status().isNotFound())
+                .andExpect(jsonPath("$.errorCode").value("NOT_FOUND"))
+                .andExpect(jsonPath("$.suggestion").isNotEmpty());
+    }
+    @Test
+    @DisplayName("GET /api/users/{id}: нечисловой ID возвращает 400")
+    void findById_withNonNumericId_shouldReturnBadRequest() throws Exception {
+        mockMvc.perform(get("/api/users/abc"))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.errorCode").value("ARGUMENT_TYPE_MISMATCH"));
+    }
+    @Test
+    @DisplayName("POST /api/users: некорректный JSON возвращает 400")
+    void create_withMalformedJson_shouldReturnBadRequest() throws Exception {
+        mockMvc.perform(post("/api/users")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{not-json"))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.errorCode").value("MALFORMED_JSON"));
+    }
+    @Test
+    @DisplayName("GET /api/users/{id}: непредвиденная ошибка возвращает 500")
+    void findById_withUnexpectedFailure_shouldReturnInternalServerError() throws Exception {
+        when(userService.findById(500L)).thenThrow(new IllegalStateException("ошибка сервиса"));
+
+        mockMvc.perform(get("/api/users/500"))
+                .andExpect(status().isInternalServerError())
+                .andExpect(jsonPath("$.errorCode").value("INTERNAL_ERROR"));
     }
 }

@@ -1,4 +1,5 @@
 package com.tournament.service.factory;
+import com.tournament.exception.ValidationException;
 import com.tournament.model.enums.UserRole;
 import com.tournament.model.user.AdminUser;
 import com.tournament.model.user.CoachUser;
@@ -21,7 +22,8 @@ public class UserFactory {
                        String firstName,
                        String lastName) {
         if (role == null) {
-            throw new IllegalArgumentException("Роль пользователя обязательна");
+            throw new ValidationException("Роль пользователя обязательна для создания учётной записи",
+                    "Укажите одну из поддерживаемых ролей пользователя");
         }
         switch (role) {
             case ADMIN:
@@ -36,7 +38,8 @@ public class UserFactory {
             case CAPTAIN:
                 return new PlayerUser(null, email, passwordHash, firstName, lastName, null);
             default:
-                throw new IllegalArgumentException("Неподдерживаемая роль пользователя: " + role);
+                throw new ValidationException("Неподдерживаемая роль пользователя: " + role,
+                        "Выберите роль ADMIN, MANAGER, COACH, REFEREE, PLAYER или CAPTAIN");
         }
     }
 }

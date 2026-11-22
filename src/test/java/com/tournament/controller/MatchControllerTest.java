@@ -1,5 +1,6 @@
 package com.tournament.controller;
 import com.tournament.dto.match.MatchResponse;
+import com.tournament.exception.BusinessRuleException;
 import com.tournament.support.AbstractServiceMockSupport;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
@@ -86,5 +87,19 @@ class MatchControllerTest extends AbstractServiceMockSupport {
         mockMvc.perform(get("/api/matches/50"))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.score").value("3:1"));
+    }
+    @Test
+    @DisplayName("PUT /api/matches/{id}/finish: запрещённая ничья возвращает 422")
+    void finishMatch_withDisallowedDraw_shouldReturnBusinessRuleResponse() throws Exception {
+        when(matchService.finishMatch(eq(50L), any())).thenThrow(
+                new BusinessRuleException("Ничья недопустима в дисциплине Баскетбол",
+                        "Измените счёт или назначьте дополнительное время", "DRAW_NOT_ALLOWED"));
+
+        mockMvc.perform(put("/api/matches/50/finish")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"score\":\"1:1\"}"))
+                .andExpect(status().isUnprocessableEntity())
+                .andExpect(jsonPath("$.errorCode").value("DRAW_NOT_ALLOWED"))
+                .andExpect(jsonPath("$.suggestion").isNotEmpty());
     }
 }

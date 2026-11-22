@@ -1,4 +1,5 @@
 package com.tournament.model.team;
+import com.tournament.exception.ValidationException;
 import com.tournament.model.tournament.Tournament;
 import com.tournament.model.user.CoachUser;
 import com.tournament.model.user.PlayerUser;
@@ -57,7 +58,8 @@ public class Team {
     }
     public void setCaptain(PlayerUser captain) {
         if (captain == null) {
-            throw new IllegalArgumentException("Капитан не может быть null");
+            throw new ValidationException("Капитана нельзя назначить: объект игрока не передан",
+                    "Передайте существующего игрока, который входит в состав команды");
         }
         if (!players.contains(captain)) {
             players.add(captain);
@@ -77,7 +79,8 @@ public class Team {
     }
     public void addPlayer(PlayerUser player) {
         if (player == null) {
-            throw new IllegalArgumentException("Игрок не может быть null");
+            throw new ValidationException("Игрока нельзя добавить: объект игрока не передан",
+                    "Укажите существующего игрока команды");
         }
         player.setTeam(this);
         if (!players.contains(player)) {

@@ -1,4 +1,7 @@
 package com.tournament.service;
+import com.tournament.exception.AccessDeniedException;
+import com.tournament.exception.ConflictException;
+import com.tournament.exception.NotFoundException;
 import com.tournament.dto.team.TeamFilter;
 import com.tournament.dto.team.TeamRequest;
 import com.tournament.dto.team.TeamResponse;
@@ -55,7 +58,7 @@ class TeamServiceImplTest extends AbstractRepositoryMockSupport {
         PlayerUser player = new PlayerUser(2L, "player@test.com", "hash", "Пётр", "Петров", "+79990000000");
         when(teamRepository.findByNameIgnoreCase("Спартак")).thenReturn(Optional.empty());
         when(userRepository.findById(2L)).thenReturn(Optional.of(player));
-        IllegalArgumentException exception = assertThrows(IllegalArgumentException.class,
+        AccessDeniedException exception = assertThrows(AccessDeniedException.class,
                 () -> teamService.create(new TeamRequest("Спартак", "Москва", 2L)));
         assertTrue(exception.getMessage().contains("не является тренером"));
         verify(teamRepository, never()).save(any(Team.class));
@@ -64,7 +67,7 @@ class TeamServiceImplTest extends AbstractRepositoryMockSupport {
     @DisplayName("create: дубликат названия команды запрещён")
     void create_withDuplicateName_shouldThrowException() {
         when(teamRepository.findByNameIgnoreCase("Зенит")).thenReturn(Optional.of(new Team(5L, "Зенит", "СПб")));
-        assertThrows(IllegalArgumentException.class,
+        assertThrows(ConflictException.class,
                 () -> teamService.create(new TeamRequest("Зенит", "Казань", null)));
     }
     @Test
@@ -126,7 +129,7 @@ class TeamServiceImplTest extends AbstractRepositoryMockSupport {
         Team team = new Team(10L, "Зенит", "Санкт-Петербург");
         team.addPlayer(new PlayerUser(3L, "player@test.com", "hash", "Пётр", "Петров", "+79990000000"));
         when(teamRepository.findById(10L)).thenReturn(Optional.of(team));
-        assertThrows(IllegalArgumentException.class, () -> teamService.delete(10L));
+        assertThrows(ConflictException.class, () -> teamService.delete(10L));
         verify(teamRepository, never()).delete(any(Team.class));
     }
     @Test
@@ -160,9 +163,9 @@ class TeamServiceImplTest extends AbstractRepositoryMockSupport {
         assertEquals("Спартак", teams.get(0).getName());
     }
     @Test
-    @DisplayName("findById: отсутствующая команда приводит к IllegalArgumentException")
+    @DisplayName("findById: отсутствующая команда приводит к NotFoundException")
     void findById_whenMissing_shouldThrowException() {
         when(teamRepository.findById(404L)).thenReturn(Optional.empty());
-        assertThrows(IllegalArgumentException.class, () -> teamService.findById(404L));
+        assertThrows(NotFoundException.class, () -> teamService.findById(404L));
     }
 }

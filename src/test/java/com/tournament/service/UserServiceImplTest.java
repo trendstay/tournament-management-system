@@ -1,4 +1,7 @@
 package com.tournament.service;
+import com.tournament.exception.BusinessRuleException;
+import com.tournament.exception.ConflictException;
+import com.tournament.exception.NotFoundException;
 import com.tournament.dto.user.UserFilter;
 import com.tournament.dto.user.UserRequest;
 import com.tournament.dto.user.UserResponse;
@@ -51,12 +54,12 @@ class UserServiceImplTest extends AbstractRepositoryMockSupport {
         assertInstanceOf(AdminUser.class, savedUser);
     }
     @Test
-    @DisplayName("create: дубликат email приводит к IllegalArgumentException")
+    @DisplayName("create: дубликат email приводит к ConflictException")
     void create_withDuplicateEmail_shouldThrowException() {
         User existing = new AdminUser(5L, "dup@test.com", "hash", "A", "B");
         when(userRepository.findByEmailIgnoreCase("dup@test.com")).thenReturn(Optional.of(existing));
         UserRequest request = new UserRequest("dup@test.com", "pass123", "C", "D", UserRole.MANAGER, null, null);
-        IllegalArgumentException exception = assertThrows(IllegalArgumentException.class,
+        ConflictException exception = assertThrows(ConflictException.class,
                 () -> userService.create(request));
         assertTrue(exception.getMessage().contains("уже существует"));
         verify(userRepository, never()).save(any(User.class));
@@ -88,10 +91,10 @@ class UserServiceImplTest extends AbstractRepositoryMockSupport {
         assertEquals(UserRole.CAPTAIN, response.getRole());
     }
     @Test
-    @DisplayName("findById: отсутствующий пользователь приводит к IllegalArgumentException")
+    @DisplayName("findById: отсутствующий пользователь приводит к NotFoundException")
     void findById_whenMissing_shouldThrowException() {
         when(userRepository.findById(99L)).thenReturn(Optional.empty());
-        assertThrows(IllegalArgumentException.class, () -> userService.findById(99L));
+        assertThrows(NotFoundException.class, () -> userService.findById(99L));
     }
     @Test
     @DisplayName("update: запрещает смену роли тренера на администратора")
@@ -100,7 +103,7 @@ class UserServiceImplTest extends AbstractRepositoryMockSupport {
         when(userRepository.findById(7L)).thenReturn(Optional.of(coach));
         when(userRepository.findByEmailIgnoreCase("coach@test.com")).thenReturn(Optional.of(coach));
         UserRequest request = new UserRequest("coach@test.com", null, "Иван", "Иванов", UserRole.ADMIN, null, null);
-        IllegalArgumentException exception = assertThrows(IllegalArgumentException.class,
+        BusinessRuleException exception = assertThrows(BusinessRuleException.class,
                 () -> userService.update(7L, request));
         assertTrue(exception.getMessage().contains("не поддерживается"));
     }

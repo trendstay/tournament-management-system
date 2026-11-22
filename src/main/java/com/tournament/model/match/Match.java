@@ -1,4 +1,5 @@
 package com.tournament.model.match;
+import com.tournament.exception.ValidationException;
 import com.tournament.model.enums.MatchStatus;
 import com.tournament.model.team.Team;
 import com.tournament.model.tournament.Tournament;
@@ -52,7 +53,9 @@ public class Match {
      */
     public void updateScore(String newScore) {
         if (newScore == null || !newScore.matches("\\d+:\\d+")) {
-            throw new IllegalArgumentException("Некорректный формат счета! Ожидается 'X:Y', например '2:1'");
+            throw new ValidationException(
+                    "Некорректный формат счета «" + newScore + "»: ожидается формат 'X:Y', например '2:1'",
+                    "Укажите два неотрицательных целых числа через двоеточие, например 2:1");
         }
         this.score = newScore;
     }
@@ -69,6 +72,10 @@ public class Match {
     public int getAwayGoals() {
         String[] parts = score.split(":");
         return Integer.parseInt(parts[1].trim());
+    }
+    /** Проверить, что счёт матча равный. */
+    public boolean isDraw() {
+        return getHomeGoals() == getAwayGoals();
     }
     /**
      * Логический алгоритм определения победителя.

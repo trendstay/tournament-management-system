@@ -1,4 +1,6 @@
 package com.tournament.model.tournament;
+import com.tournament.exception.ValidationException;
+import com.tournament.model.enums.MatchStatus;
 import com.tournament.model.enums.SportType;
 import com.tournament.model.match.Match;
 import com.tournament.model.team.Team;
@@ -21,7 +23,9 @@ import jakarta.persistence.Table;
 import java.math.BigDecimal;
 import java.time.LocalDate;
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 /**
  * Класс спортивного турнира.
  * Хранится в таблице {@code tournaments}, команды связаны через
@@ -66,7 +70,8 @@ public class Tournament {
     }
     public void addTeam(Team team) {
         if (team == null) {
-            throw new IllegalArgumentException("Команда не может быть null");
+            throw new ValidationException("Команду нельзя добавить в турнир: объект команды не передан",
+                    "Выберите существующую команду для регистрации");
         }
         this.teams.add(team);
     }
@@ -97,6 +102,68 @@ public class Tournament {
                     i + 1, team.getName(), team.getCity()));
         }
         table.append("==================================================\n");
+        return table.toString();
+    }
+    /** Сформировать таблицу по завершённым матчам турнира с подсчётом очков. */
+    public String generateStandingsTable(List<Match> matches) {
+        // Индексы массива: игры, победы, ничьи, поражения, очки.
+        Map<Long, int[]> statsByTeamId = new HashMap<>();
+        for (Team team : teams) {
+            statsByTeamId.put(team.getId(), new int[5]);
+        }
+        for (Match match : matches) {
+            if (match.getStatus() != MatchStatus.FINISHED) {
+                continue;
+            }
+            Team homeTeam = match.getHomeTeam();
+            Team awayTeam = match.getAwayTeam();
+            if (homeTeam == null || awayTeam == null) {
+                continue;
+            }
+            int[] homeStats = statsByTeamId.get(homeTeam.getId());
+            int[] awayStats = statsByTeamId.get(awayTeam.getId());
+            if (homeStats == null || awayStats == null) {
+                continue;
+            }
+
+            int homeGoals = match.getHomeGoals();
+            int awayGoals = match.getAwayGoals();
+            homeStats[0]++;
+            awayStats[0]++;
+            if (homeGoals > awayGoals) {
+                homeStats[1]++;
+                homeStats[4] += 3;
+                awayStats[3]++;
+            } else if (awayGoals > homeGoals) {
+                awayStats[1]++;
+                awayStats[4] += 3;
+                homeStats[3]++;
+            } else {
+                homeStats[2]++;
+                awayStats[2]++;
+                homeStats[4]++;
+                awayStats[4]++;
+            }
+        }
+
+        List<Team> sortedTeams = new ArrayList<>(teams);
+        sortedTeams.sort((first, second) -> Integer.compare(
+                statsByTeamId.get(second.getId())[4], statsByTeamId.get(first.getId())[4]));
+
+        StringBuilder table = new StringBuilder();
+        String sportName = (sportType != null) ? sportType.getDisplayName() : "Общий";
+        table.append(String.format("=== ТУРНИРНАЯ ТАБЛИЦА: %s [%s] ===\n", title, sportName));
+        table.append(String.format("%-5s | %-20s | %-15s | %-4s | %-2s | %-2s | %-2s | %-3s\n",
+                "№", "Команда", "Город", "И", "В", "Н", "П", "О"));
+        table.append("----------------------------------------------------------------------------------\n");
+        for (int i = 0; i < sortedTeams.size(); i++) {
+            Team team = sortedTeams.get(i);
+            int[] stats = statsByTeamId.get(team.getId());
+            table.append(String.format("%-5d | %-20s | %-15s | %-4d | %-2d | %-2d | %-2d | %-3d\n",
+                    i + 1, team.getName(), team.getCity(),
+                    stats[0], stats[1], stats[2], stats[3], stats[4]));
+        }
+        table.append("==================================================================================\n");
         return table.toString();
     }
     // Геттеры и сеттеры
