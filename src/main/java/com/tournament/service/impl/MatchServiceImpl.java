@@ -16,6 +16,8 @@ import com.tournament.repository.MatchRepository;
 import com.tournament.repository.TeamRepository;
 import com.tournament.repository.TournamentRepository;
 import com.tournament.service.MatchService;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import java.util.ArrayList;
@@ -32,6 +34,7 @@ import java.util.concurrent.atomic.AtomicInteger;
 @Service
 @Transactional
 public class MatchServiceImpl extends AbstractCrudService<Match, MatchRequest, MatchResponse> implements MatchService {
+    private static final Logger log = LoggerFactory.getLogger(MatchServiceImpl.class);
     private final MatchRepository matchRepository;
     private final TeamRepository teamRepository;
     private final TournamentRepository tournamentRepository;
@@ -82,7 +85,10 @@ public class MatchServiceImpl extends AbstractCrudService<Match, MatchRequest, M
                     "DRAW_NOT_ALLOWED");
         }
         match.setStatus(MatchStatus.FINISHED);
-        return toResponse(matchRepository.save(match));
+        MatchResponse response = toResponse(matchRepository.save(match));
+        log.info("Матч завершён: id={}, счёт={}, победитель={}",
+                matchId, response.getScore(), response.getWinnerTeamName());
+        return response;
     }
     /**
      * Пакетное завершение матчей с распараллеливанием расчётов.
@@ -104,8 +110,9 @@ public class MatchServiceImpl extends AbstractCrudService<Match, MatchRequest, M
                 executor.submit(new Runnable() {
                     @Override
                     public void run() {
-                        String threadName = Thread.currentThread().getName();
-                        System.out.println("[" + threadName + "] Расчёт результата матча ID: " + match.getId());
+                        // Имя потока в логе показывает, что расчёт идёт параллельно.
+                        log.info("[{}] Расчёт результата матча ID: {}",
+                                Thread.currentThread().getName(), match.getId());
                         if (match.getStatus() == null || match.getStatus() != MatchStatus.FINISHED) {
                             match.setStatus(MatchStatus.FINISHED);
                         }
@@ -120,7 +127,9 @@ public class MatchServiceImpl extends AbstractCrudService<Match, MatchRequest, M
                 Thread.currentThread().interrupt();
             }
         }
-        return matchMapper.toResponseList(matchRepository.saveAll(matches));
+        List<MatchResponse> result = matchMapper.toResponseList(matchRepository.saveAll(matches));
+        log.info("Пакетная обработка завершена: матчей={}", result.size());
+        return result;
     }
     @Override
     protected Match createEntity(MatchRequest request) {

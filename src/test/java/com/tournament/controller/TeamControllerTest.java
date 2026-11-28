@@ -1,7 +1,7 @@
 package com.tournament.controller;
 import com.tournament.dto.team.TeamResponse;
 import com.tournament.exception.ConflictException;
-import com.tournament.support.AbstractServiceMockSupport;
+import com.tournament.support.AbstractSecuredMockMvcSupport;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -18,9 +18,10 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 /**
  * Тесты REST-контроллера команд. Сервис подменён Mockito-моком.
+ * Запросы выполняются от имени тестового администратора (см. AbstractSecuredMockMvcSupport).
  */
 @DisplayName("TeamController: REST API команд")
-class TeamControllerTest extends AbstractServiceMockSupport {
+class TeamControllerTest extends AbstractSecuredMockMvcSupport {
     @Autowired
     private MockMvc mockMvc;
     private TeamResponse sampleTeam() {

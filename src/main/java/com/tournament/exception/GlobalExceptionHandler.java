@@ -13,7 +13,16 @@ import org.springframework.web.method.annotation.MethodArgumentTypeMismatchExcep
 import java.util.HashMap;
 import java.util.Map;
 
-/** Отдельно преобразует каждый известный тип ошибки в понятный REST-ответ. */
+/**
+ * Отдельно преобразует каждый известный тип ошибки в понятный REST-ответ.
+ *
+ * <p>Лабораторная работа №4: здесь же обрабатывается отказ Spring Security
+ * по методу контроллера ({@code @PreAuthorize}). Это <b>другой</b> класс исключения —
+ * {@code org.springframework.security.access.AccessDeniedException}, а не собственный
+ * {@code com.tournament.exception.AccessDeniedException} из лабораторной работы №3.
+ * Без отдельного обработчика отказ попал бы в страховочный {@code Exception}
+ * и вернул бы 500 вместо 403.</p>
+ */
 @RestControllerAdvice
 public class GlobalExceptionHandler {
 
@@ -43,6 +52,20 @@ public class GlobalExceptionHandler {
     @ExceptionHandler(AccessDeniedException.class)
     public ResponseEntity<ErrorResponse> handleAccessDenied(AccessDeniedException exception) {
         return build(HttpStatus.FORBIDDEN, exception);
+    }
+
+    /**
+     * Отказ Spring Security по роли (метод помечен {@code @PreAuthorize}).
+     * Возвращает 403 в том же формате, что и остальные ошибки.
+     */
+    @ExceptionHandler(org.springframework.security.access.AccessDeniedException.class)
+    public ResponseEntity<ErrorResponse> handleSpringAccessDenied(
+            org.springframework.security.access.AccessDeniedException exception) {
+        ErrorResponse body = new ErrorResponse(HttpStatus.FORBIDDEN.value(), "ACCESS_DENIED",
+                "Недостаточно прав для выполнения операции",
+                "Обратитесь к администратору: операция доступна только пользователям с подходящей ролью");
+        body.setDetails(Map.of("reason", exception.getMessage() == null ? "нет прав" : exception.getMessage()));
+        return ResponseEntity.status(HttpStatus.FORBIDDEN).body(body);
     }
 
     @ExceptionHandler(MethodArgumentNotValidException.class)

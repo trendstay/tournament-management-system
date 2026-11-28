@@ -1,5 +1,16 @@
+### Лабораторная работа №4: ко всем запросам добавлен HTTP Basic.
+### Запросы рассчитаны на профиль demo: пользователи admin/manager/referee/coach/player
+### с паролем pass123 (в базе хранятся только BCrypt-хеши).
+### В заголовке Authorization указан base64 от строки «email:пароль» и подпись роли.
+### Порядок: 1) запустить приложение с профилем demo, 2) выполнять запросы сверху вниз.
+
+### 0. Проверка входа: список команд от имени администратора
+GET http://127.0.0.1:8080/api/teams
+Authorization: Basic YWRtaW5AdG91cm5hbWVudC5jb206cGFzczEyMw==
+
 ### 1. Тренер
 POST http://127.0.0.1:8080/api/users
+Authorization: Basic YWRtaW5AdG91cm5hbWVudC5jb206cGFzczEyMw==
 Content-Type: application/json
 
 {
@@ -13,6 +24,7 @@ Content-Type: application/json
 ###
 ### 2. Судья
 POST http://127.0.0.1:8080/api/users
+Authorization: Basic YWRtaW5AdG91cm5hbWVudC5jb206cGFzczEyMw==
 Content-Type: application/json
 
 {
@@ -26,6 +38,7 @@ Content-Type: application/json
 ###
 ### 3. Администратор
 POST http://127.0.0.1:8080/api/users
+Authorization: Basic YWRtaW5AdG91cm5hbWVudC5jb206cGFzczEyMw==
 Content-Type: application/json
 
 {
@@ -39,6 +52,7 @@ Content-Type: application/json
 ###
 ### 4. Игрок (команду привяжем позже, через teamId — см. шаг 6)
 POST http://127.0.0.1:8080/api/users
+Authorization: Basic YWRtaW5AdG91cm5hbWVudC5jb206cGFzczEyMw==
 Content-Type: application/json
 
 {
@@ -52,6 +66,7 @@ Content-Type: application/json
 
 ### 5. Зенит (с тренером id=1)
 POST http://127.0.0.1:8080/api/teams
+Authorization: Basic bWFuYWdlckB0b3VybmFtZW50LmNvbTpwYXNzMTIz
 Content-Type: application/json
 
 {
@@ -63,6 +78,7 @@ Content-Type: application/json
 ###
 ### 6. Спартак (без тренера)
 POST http://127.0.0.1:8080/api/teams
+Authorization: Basic bWFuYWdlckB0b3VybmFtZW50LmNvbTpwYXNzMTIz
 Content-Type: application/json
 
 {
@@ -72,6 +88,7 @@ Content-Type: application/json
 
 ### 7. Привязать игрока id=4 к команде id=1
 PUT http://127.0.0.1:8080/api/users/4
+Authorization: Basic YWRtaW5AdG91cm5hbWVudC5jb206cGFzczEyMw==
 Content-Type: application/json
 
 {
@@ -85,9 +102,11 @@ Content-Type: application/json
 
 ### 8. Добавить игрока в состав
 POST http://127.0.0.1:8080/api/teams/1/players/4
+Authorization: Basic Y29hY2hAdG91cm5hbWVudC5jb206cGFzczEyMw==
 
 ### 9. Капитан команды
 PUT http://127.0.0.1:8080/api/teams/1/captain
+Authorization: Basic Y29hY2hAdG91cm5hbWVudC5jb206cGFzczEyMw==
 Content-Type: application/json
 
 {
@@ -96,6 +115,7 @@ Content-Type: application/json
 
 ### 10. Создать турнир
 POST http://127.0.0.1:8080/api/tournaments
+Authorization: Basic bWFuYWdlckB0b3VybmFtZW50LmNvbTpwYXNzMTIz
 Content-Type: application/json
 
 {
@@ -110,6 +130,7 @@ Content-Type: application/json
 
 ### 11. Матч между командами
 POST http://127.0.0.1:8080/api/matches
+Authorization: Basic bWFuYWdlckB0b3VybmFtZW50LmNvbTpwYXNzMTIz
 Content-Type: application/json
 
 {
@@ -122,6 +143,7 @@ Content-Type: application/json
 
 ### 12. Завершить матч со счётом 3:1
 PUT http://127.0.0.1:8080/api/matches/1/finish
+Authorization: Basic cmVmZXJlZUB0b3VybmFtZW50LmNvbTpwYXNzMTIz
 Content-Type: application/json
 
 {
@@ -130,6 +152,7 @@ Content-Type: application/json
 
 ### 13. Зарегистрировать команду в турнире
 POST http://127.0.0.1:8080/api/tournaments/1/teams
+Authorization: Basic bWFuYWdlckB0b3VybmFtZW50LmNvbTpwYXNzMTIz
 Content-Type: application/json
 
 {
@@ -139,9 +162,11 @@ Content-Type: application/json
 ###
 ### 14. Турнирная таблица с результатами и очками
 GET http://127.0.0.1:8080/api/tournaments/1/standings
+Authorization: Basic cGxheWVyQHRvdXJuYW1lbnQuY29tOnBhc3MxMjM=
 
 ### 15. Обработать пачку матчей многопоточно
 POST http://127.0.0.1:8080/api/matches/process
+Authorization: Basic YWRtaW5AdG91cm5hbWVudC5jb206cGFzczEyMw==
 Content-Type: application/json
 
 {
@@ -150,69 +175,86 @@ Content-Type: application/json
 
 ### 16. Все пользователи
 GET http://127.0.0.1:8080/api/users
+Authorization: Basic YWRtaW5AdG91cm5hbWVudC5jb206cGFzczEyMw==
 
 ###
 ### 17. Пользователь по id
 GET http://127.0.0.1:8080/api/users/1
+Authorization: Basic cGxheWVyQHRvdXJuYW1lbnQuY29tOnBhc3MxMjM=
 
 ###
 ### 18. Пользователь по email
 GET http://127.0.0.1:8080/api/users/email/coach@test.com
+Authorization: Basic cGxheWVyQHRvdXJuYW1lbnQuY29tOnBhc3MxMjM=
 
 ###
 ### 19. Фильтр: только тренеры
 GET http://127.0.0.1:8080/api/users/search?role=COACH
+Authorization: Basic YWRtaW5AdG91cm5hbWVudC5jb206cGFzczEyMw==
 
 ###
 ### 20. Фильтр: по фамилии
 GET http://127.0.0.1:8080/api/users/search?lastName=Трен
+Authorization: Basic YWRtaW5AdG91cm5hbWVudC5jb206cGFzczEyMw==
 
 ###
 ### 21. Фильтр: роль + фамилия одновременно
 GET http://127.0.0.1:8080/api/users/search?role=COACH&lastName=Трен
+Authorization: Basic YWRtaW5AdG91cm5hbWVudC5jb206cGFzczEyMw==
 
 ###
 ### 22. Состав команды
 GET http://127.0.0.1:8080/api/teams/1/players
+Authorization: Basic Y29hY2hAdG91cm5hbWVudC5jb206cGFzczEyMw==
 
 ###
 ### 23. Фильтр команд по городу
 GET http://127.0.0.1:8080/api/teams/search?city=Москва
+Authorization: Basic cGxheWVyQHRvdXJuYW1lbnQuY29tOnBhc3MxMjM=
 
 ###
 ### 24. Фильтр команд по тренеру
 GET http://127.0.0.1:8080/api/teams/search?coachId=1
+Authorization: Basic cGxheWVyQHRvdXJuYW1lbnQuY29tOnBhc3MxMjM=
 
 ###
 ### 25. Фильтр турниров по виду спорта
 GET http://127.0.0.1:8080/api/tournaments/search?sportType=FOOTBALL
+Authorization: Basic cGxheWVyQHRvdXJuYW1lbnQuY29tOnBhc3MxMjM=
 
 ###
 ### 26. Фильтр турниров по периоду дат
 GET http://127.0.0.1:8080/api/tournaments/search?startFrom=2026-01-01&startTo=2026-12-31
+Authorization: Basic cGxheWVyQHRvdXJuYW1lbnQuY29tOnBhc3MxMjM=
 
 ###
 ### 27. Фильтр турниров по судье
 GET http://127.0.0.1:8080/api/tournaments/search?refereeId=2
+Authorization: Basic cGxheWVyQHRvdXJuYW1lbnQuY29tOnBhc3MxMjM=
 
 ###
 ### 28. Фильтр матчей по статусу
 GET http://127.0.0.1:8080/api/matches/search?status=FINISHED
+Authorization: Basic cGxheWVyQHRvdXJuYW1lbnQuY29tOnBhc3MxMjM=
 
 ###
 ### 29. Фильтр матчей по турниру
 GET http://127.0.0.1:8080/api/matches/search?tournamentId=1
+Authorization: Basic cGxheWVyQHRvdXJuYW1lbnQuY29tOnBhc3MxMjM=
 
 ###
 ### 30. Фильтр матчей по команде
 GET http://127.0.0.1:8080/api/matches/search?teamId=1
+Authorization: Basic cGxheWVyQHRvdXJuYW1lbnQuY29tOnBhc3MxMjM=
 
 ###
 ### 31. Фильтр матчей по периоду
 GET http://127.0.0.1:8080/api/matches/search?from=2026-12-01T00:00:00&to=2026-12-31T23:59:59
+Authorization: Basic cGxheWVyQHRvdXJuYW1lbnQuY29tOnBhc3MxMjM=
 
 ### 32. Дубликат email → 409 Conflict, запись не создаётся
 POST http://127.0.0.1:8080/api/users
+Authorization: Basic YWRtaW5AdG91cm5hbWVudC5jb206cGFzczEyMw==
 Content-Type: application/json
 
 {
@@ -226,6 +268,7 @@ Content-Type: application/json
 ###
 ### 33. Неполные данные пользователя → 400
 POST http://127.0.0.1:8080/api/users
+Authorization: Basic YWRtaW5AdG91cm5hbWVudC5jb206cGFzczEyMw==
 Content-Type: application/json
 
 {
@@ -235,6 +278,7 @@ Content-Type: application/json
 ###
 ### 34. Короткий пароль → 400
 POST http://127.0.0.1:8080/api/users
+Authorization: Basic YWRtaW5AdG91cm5hbWVudC5jb206cGFzczEyMw==
 Content-Type: application/json
 
 {
@@ -248,6 +292,7 @@ Content-Type: application/json
 ###
 ### 35. Команда сама с собой → 422 BusinessRuleException
 POST http://127.0.0.1:8080/api/matches
+Authorization: Basic bWFuYWdlckB0b3VybmFtZW50LmNvbTpwYXNzMTIz
 Content-Type: application/json
 
 {
@@ -258,6 +303,7 @@ Content-Type: application/json
 ###
 ### 36. Тренер в роли судьи турнира → 403 AccessDeniedException
 POST http://127.0.0.1:8080/api/tournaments
+Authorization: Basic bWFuYWdlckB0b3VybmFtZW50LmNvbTpwYXNzMTIz
 Content-Type: application/json
 
 {
@@ -269,6 +315,7 @@ Content-Type: application/json
 ###
 ### 37. Несуществующая команда → 404 NotFoundException
 POST http://127.0.0.1:8080/api/matches
+Authorization: Basic bWFuYWdlckB0b3VybmFtZW50LmNvbTpwYXNzMTIz
 Content-Type: application/json
 
 {
@@ -278,14 +325,17 @@ Content-Type: application/json
 
 ### 38. Удалить несуществующего пользователя → 404 NotFoundException
 DELETE http://127.0.0.1:8080/api/users/999
+Authorization: Basic YWRtaW5AdG91cm5hbWVudC5jb206cGFzczEyMw==
 
 ###
 ### 39. Удалить капитана команды → 403 AccessDeniedException
 DELETE http://127.0.0.1:8080/api/users/4
+Authorization: Basic YWRtaW5AdG91cm5hbWVudC5jb206cGFzczEyMw==
 
 ###
 ### 40. Создать свободного игрока и удалить его
 POST http://127.0.0.1:8080/api/users
+Authorization: Basic YWRtaW5AdG91cm5hbWVudC5jb206cGFzczEyMw==
 Content-Type: application/json
 
 {

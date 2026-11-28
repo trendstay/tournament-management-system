@@ -14,6 +14,8 @@ import com.tournament.service.MatchService;
 import com.tournament.service.TeamService;
 import com.tournament.service.TournamentService;
 import com.tournament.service.UserService;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.boot.ApplicationArguments;
 import org.springframework.boot.ApplicationRunner;
 import org.springframework.context.annotation.Profile;
@@ -27,11 +29,14 @@ import java.util.List;
  * (работа с данными «из кода», пункт задания про CRUD-операции).
  *
  * <p>Активируется только профилем {@code demo}:
- * {@code mvn spring-boot:run -Dspring-boot.run.profiles=demo}.</p>
+ * {@code mvn spring-boot:run -Dspring-boot.run.profiles=demo}. Пароли демо-пользователей
+ * проходят через сервис и сохраняются в виде BCrypt-хешей; для входа в Swagger UI
+ * или Postman используется открытый пароль {@code pass123}.</p>
  */
 @Component
 @Profile("demo")
 public class DemoDataRunner implements ApplicationRunner {
+    private static final Logger log = LoggerFactory.getLogger(DemoDataRunner.class);
     private final UserService userService;
     private final TeamService teamService;
     private final TournamentService tournamentService;
@@ -48,7 +53,7 @@ public class DemoDataRunner implements ApplicationRunner {
     @Override
     public void run(ApplicationArguments args) {
         if (!userService.findAll().isEmpty()) {
-            System.out.println("Демо-данные уже загружены, инициализация пропущена");
+            log.info("Демо-данные уже загружены, инициализация пропущена");
             return;
         }
         UserResponse admin = userService.create(new UserRequest("admin@tournament.com", "pass123",
@@ -76,8 +81,10 @@ public class DemoDataRunner implements ApplicationRunner {
         MatchResponse match = matchService.create(new MatchRequest(firstTeam.getId(), secondTeam.getId(),
                 tournament.getId(), LocalDateTime.now(), "0:0"));
         MatchResponse finishedMatch = matchService.finishMatch(match.getId(), new FinishMatchRequest("3:1"));
-        System.out.println("=== ДЕМО-ДАННЫЕ ЗАГРУЖЕНЫ (администратор: " + admin.getEmail() + ") ===");
-        System.out.println(tournamentService.getStandingsTable(tournament.getId()));
-        System.out.println(finishedMatch.getMatchReport());
+        log.info("Демо-данные загружены, администратор: {}", admin.getEmail());
+        log.warn("Демонстрационные учётные записи используют пароль pass123; в реальной системе так делать нельзя");
+        log.info("Турнирная таблица турнира {}:\n{}",
+                tournament.getId(), tournamentService.getStandingsTable(tournament.getId()));
+        log.info("Протокол матча {}:\n{}", finishedMatch.getId(), finishedMatch.getMatchReport());
     }
 }

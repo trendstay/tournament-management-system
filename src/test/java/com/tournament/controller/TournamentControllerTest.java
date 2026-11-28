@@ -2,7 +2,7 @@ package com.tournament.controller;
 import com.tournament.dto.tournament.TournamentRequest;
 import com.tournament.exception.AccessDeniedException;
 import com.tournament.dto.tournament.TournamentResponse;
-import com.tournament.support.AbstractServiceMockSupport;
+import com.tournament.support.AbstractSecuredMockMvcSupport;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -19,9 +19,10 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 /**
  * Тесты REST-контроллера турниров. Сервис подменён Mockito-моком.
+ * Запросы выполняются от имени тестового администратора (см. AbstractSecuredMockMvcSupport).
  */
 @DisplayName("TournamentController: REST API турниров")
-class TournamentControllerTest extends AbstractServiceMockSupport {
+class TournamentControllerTest extends AbstractSecuredMockMvcSupport {
     @Autowired
     private MockMvc mockMvc;
     private TournamentResponse sampleTournament() {

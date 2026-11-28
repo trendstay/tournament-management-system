@@ -3,7 +3,7 @@ import com.tournament.exception.NotFoundException;
 import com.tournament.model.enums.UserRole;
 import com.tournament.dto.user.UserRequest;
 import com.tournament.dto.user.UserResponse;
-import com.tournament.support.AbstractServiceMockSupport;
+import com.tournament.support.AbstractSecuredMockMvcSupport;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -23,9 +23,10 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 /**
  * Тесты REST-контроллера пользователей.
  * Сервис подменён Mockito-моком, база данных не используется.
+ * Запросы выполняются от имени тестового администратора (см. AbstractSecuredMockMvcSupport).
  */
 @DisplayName("UserController: REST API пользователей")
-class UserControllerTest extends AbstractServiceMockSupport {
+class UserControllerTest extends AbstractSecuredMockMvcSupport {
     @Autowired
     private MockMvc mockMvc;
     private UserResponse sampleUser() {
@@ -129,6 +130,23 @@ class UserControllerTest extends AbstractServiceMockSupport {
                 .andExpect(status().isBadRequest())
                 .andExpect(jsonPath("$.errorCode").value("MALFORMED_JSON"));
     }
+    @Test
+    @DisplayName("GET /api/users/search: неизвестная роль возвращает 400")
+    void search_withUnknownRole_shouldReturnBadRequest() throws Exception {
+        mockMvc.perform(get("/api/users/search").param("role", "SUPERSTAR"))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.errorCode").value("VALIDATION_ERROR"));
+    }
+
+    @Test
+    @DisplayName("GET /api/users/search: роль в нижнем регистре принимается")
+    void search_withLowerCaseRole_shouldReturnOk() throws Exception {
+        when(userService.findByFilter(any())).thenReturn(List.of(sampleUser()));
+
+        mockMvc.perform(get("/api/users/search").param("role", "coach"))
+                .andExpect(status().isOk());
+    }
+
     @Test
     @DisplayName("GET /api/users/{id}: непредвиденная ошибка возвращает 500")
     void findById_withUnexpectedFailure_shouldReturnInternalServerError() throws Exception {

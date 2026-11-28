@@ -2,6 +2,8 @@ package com.tournament.service.impl;
 import com.tournament.exception.NotFoundException;
 import com.tournament.mapper.DtoMapper;
 import com.tournament.service.CrudService;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.transaction.annotation.Transactional;
 import java.util.ArrayList;
@@ -20,6 +22,7 @@ import java.util.List;
  * @param <RES> тип DTO ответа
  */
 public abstract class AbstractCrudService<E, REQ, RES> implements CrudService<REQ, RES> {
+    private static final Logger log = LoggerFactory.getLogger(AbstractCrudService.class);
     protected final JpaRepository<E, Long> repository;
     private final DtoMapper<E, RES> mapper;
     protected AbstractCrudService(JpaRepository<E, Long> repository, DtoMapper<E, RES> mapper) {
@@ -31,6 +34,7 @@ public abstract class AbstractCrudService<E, REQ, RES> implements CrudService<RE
     public RES create(REQ request) {
         E entity = createEntity(request);
         E saved = repository.save(entity);
+        log.info("Создана запись: {}", entityName());
         return mapper.toResponse(saved);
     }
     @Override
@@ -39,6 +43,7 @@ public abstract class AbstractCrudService<E, REQ, RES> implements CrudService<RE
         E entity = findEntity(id);
         applyRequest(entity, request);
         E saved = repository.save(entity);
+        log.info("Обновлена запись: {} (id={})", entityName(), id);
         return mapper.toResponse(saved);
     }
     @Override
@@ -56,6 +61,7 @@ public abstract class AbstractCrudService<E, REQ, RES> implements CrudService<RE
     public void delete(Long id) {
         E entity = findEntity(id);
         repository.delete(entity);
+        log.info("Удалена запись: {} (id={})", entityName(), id);
     }
     /** Найти сущность или выбросить {@link NotFoundException}, если её нет. */
     protected E findEntity(Long id) {
@@ -82,4 +88,5 @@ public abstract class AbstractCrudService<E, REQ, RES> implements CrudService<RE
     protected String entityNotFoundMessage(Long id) {
         return entityName() + " с ID " + id + " не найден(а)";
     }
+
 }

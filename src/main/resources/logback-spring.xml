@@ -1,0 +1,48 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+  Конфигурация журналирования (лабораторная работа №4).
+  Логи пишутся в консоль и в файл logs/tournament.log (с почасовой прокруткой).
+  Имя logback-spring.xml выбрано не случайно: Spring Boot дополнительно
+  обрабатывает теги <springProfile>, поэтому уровни можно менять по профилям.
+-->
+<configuration scan="false">
+
+    <!-- Загружаем стандартные преобразователи Spring Boot (цвета, шаблоны, PID). -->
+    <include resource="org/springframework/boot/logging/logback/defaults.xml"/>
+
+    <springProperty scope="context" name="LOG_FILE" source="logging.file.name" defaultValue="logs/tournament.log"/>
+    <property name="LOG_FILE_PATTERN_FILE"
+              value="%d{yyyy-MM-dd HH:mm:ss.SSS} %-5level [%thread] %logger{40} - %msg%n"/>
+
+    <!-- 1. Консоль: тот же вывод, что и раньше, но через логгер. -->
+    <include resource="org/springframework/boot/logging/logback/console-appender.xml"/>
+
+    <!-- 2. Файл: logs/tournament.log, ежедневная прокрутка, 30 дней истории, до 100 МБ. -->
+    <appender name="FILE" class="ch.qos.logback.core.rolling.RollingFileAppender">
+        <file>${LOG_FILE}</file>
+        <encoder>
+            <pattern>${LOG_FILE_PATTERN_FILE}</pattern>
+            <charset>UTF-8</charset>
+        </encoder>
+        <rollingPolicy class="ch.qos.logback.core.rolling.SizeAndTimeBasedRollingPolicy">
+            <fileNamePattern>${LOG_FILE}.%d{yyyy-MM-dd}.%i.gz</fileNamePattern>
+            <maxFileSize>10MB</maxFileSize>
+            <maxHistory>30</maxHistory>
+            <totalSizeCap>100MB</totalSizeCap>
+        </rollingPolicy>
+    </appender>
+
+    <!-- Собственный код приложения — уровень INFO (создание, изменение, удаление, доступ). -->
+    <logger name="com.tournament" level="INFO"/>
+
+    <!-- Spring Security и веб-слой на INFO, чтобы не было лишнего шума. -->
+    <logger name="org.springframework.security" level="INFO"/>
+    <logger name="org.springframework.web" level="INFO"/>
+
+    <!-- Корневой логгер пишет в оба места назначения. -->
+    <root level="INFO">
+        <appender-ref ref="CONSOLE"/>
+        <appender-ref ref="FILE"/>
+    </root>
+
+</configuration>

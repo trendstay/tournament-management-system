@@ -16,6 +16,9 @@ import com.tournament.repository.TeamRepository;
 import com.tournament.repository.UserRepository;
 import com.tournament.service.UserService;
 import com.tournament.service.factory.UserFactory;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import java.util.List;
@@ -23,26 +26,32 @@ import java.util.List;
  * Реализация сервиса пользователей.
  *
  * <p>Класс отвечает только за бизнес-логику пользователей: проверку уникальности email,
- * создание нужного подкласса пользователя через {@link UserFactory} и выборку по фильтрам.
- * Пароль сохраняется в поле {@code passwordHash} как есть — хеширование и аутентификация
- * появятся в лабораторной работе №4 (Spring Security).</p>
+ * создание нужного подкласса пользователя через {@link UserFactory} и выборку по фильтрам.</p>
+ *
+ * <p>Лабораторная работа №4: пароль перед сохранением хешируется BCrypt-кодировщиком,
+ * поэтому в базе в поле {@code password_hash} лежит хеш, а не открытый текст.
+ * При обновлении, если пароль не передан, существующий хеш не меняется.</p>
  */
 @Service
 @Transactional
 public class UserServiceImpl extends AbstractCrudService<User, UserRequest, UserResponse> implements UserService {
+    private static final Logger log = LoggerFactory.getLogger(UserServiceImpl.class);
     private final UserRepository userRepository;
     private final TeamRepository teamRepository;
     private final UserFactory userFactory;
     private final UserMapper userMapper;
+    private final PasswordEncoder passwordEncoder;
     public UserServiceImpl(UserRepository userRepository,
                            TeamRepository teamRepository,
                            UserFactory userFactory,
-                           UserMapper userMapper) {
+                           UserMapper userMapper,
+                           PasswordEncoder passwordEncoder) {
         super(userRepository, userMapper);
         this.userRepository = userRepository;
         this.teamRepository = teamRepository;
         this.userFactory = userFactory;
         this.userMapper = userMapper;
+        this.passwordEncoder = passwordEncoder;
     }
     @Override
     public List<UserResponse> findByFilter(UserFilter filter) {
@@ -96,7 +105,8 @@ public class UserServiceImpl extends AbstractCrudService<User, UserRequest, User
             throw new ValidationException("Пароль обязателен при создании пользователя",
                     "Передайте непустой пароль длиной от 6 до 100 символов");
         }
-        String passwordHash = request.getPassword();
+        // Пароль в открытом виде нигде не сохраняется и не логируется.
+        String passwordHash = passwordEncoder.encode(request.getPassword());
         User user = userFactory.create(
                 request.getRole(),
                 request.getEmail(),
@@ -106,6 +116,7 @@ public class UserServiceImpl extends AbstractCrudService<User, UserRequest, User
         );
         applyRole(user, request.getRole());
         applyPlayerData(user, request);
+        log.info("Создаётся пользователь: email={}, роль={}", request.getEmail(), request.getRole());
         return user;
     }
     @Override
@@ -114,11 +125,14 @@ public class UserServiceImpl extends AbstractCrudService<User, UserRequest, User
         entity.setEmail(request.getEmail());
         entity.setFirstName(request.getFirstName());
         entity.setLastName(request.getLastName());
+        // Пароль меняется только если он передан; пустое поле оставляет прежний хеш.
         if (request.getPassword() != null && !request.getPassword().isBlank()) {
-            entity.setPasswordHash(request.getPassword());
+            entity.setPasswordHash(passwordEncoder.encode(request.getPassword()));
+            log.info("Пароль пользователя id={} изменён (сохранён BCrypt-хеш)", entity.getId());
         }
         applyRole(entity, request.getRole());
         applyPlayerData(entity, request);
+        log.info("Обновлён пользователь: id={}, email={}", entity.getId(), request.getEmail());
     }
     @Override
     protected String entityName() {

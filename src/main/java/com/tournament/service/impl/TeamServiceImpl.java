@@ -18,6 +18,8 @@ import com.tournament.repository.PlayerUserRepository;
 import com.tournament.repository.TeamRepository;
 import com.tournament.repository.UserRepository;
 import com.tournament.service.TeamService;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import java.util.ArrayList;
@@ -29,6 +31,7 @@ import java.util.Optional;
 @Service
 @Transactional
 public class TeamServiceImpl extends AbstractCrudService<Team, TeamRequest, TeamResponse> implements TeamService {
+    private static final Logger log = LoggerFactory.getLogger(TeamServiceImpl.class);
     private final TeamRepository teamRepository;
     private final UserRepository userRepository;
     private final PlayerUserRepository playerUserRepository;
@@ -72,6 +75,7 @@ public class TeamServiceImpl extends AbstractCrudService<Team, TeamRequest, Team
             previousTeam.removePlayer(player);
         }
         team.addPlayer(player);
+        log.info("Игрок добавлен в состав: teamId={}, playerId={}", teamId, playerId);
         return toResponse(teamRepository.save(team));
     }
     @Override
@@ -79,6 +83,7 @@ public class TeamServiceImpl extends AbstractCrudService<Team, TeamRequest, Team
         Team team = findEntity(teamId);
         PlayerUser player = findPlayer(playerId);
         team.removePlayer(player);
+        log.info("Игрок удалён из состава: teamId={}, playerId={}", teamId, playerId);
         return toResponse(teamRepository.save(team));
     }
     @Override
@@ -89,6 +94,7 @@ public class TeamServiceImpl extends AbstractCrudService<Team, TeamRequest, Team
             team.addPlayer(player);
         }
         team.setCaptain(player);
+        log.info("Назначен капитан: teamId={}, playerId={}", teamId, playerId);
         return toResponse(teamRepository.save(team));
     }
     @Override

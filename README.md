@@ -8,13 +8,16 @@
   архитектура MVC, тесты Spring Boot без обращения к базе данных.
 * Лабораторная работа №3 — собственные исключения, единый формат ошибок REST API,
   глобальная обработка ошибок, проверка ничьей и турнирная таблица с подсчётом очков.
+* Лабораторная работа №4 — Spring Security (HTTP Basic, роли, BCrypt-хеширование паролей),
+  единые ответы 401/403, логирование в консоль и файл через SLF4J и Logback,
+  Swagger UI и OpenAPI-спецификация (springdoc-openapi).
 ---
 ## Что делает система
 1. **Пользователи.** Абстрактный класс `User` и наследники по ролям: `AdminUser`,
    `ManagerUser`, `CoachUser`, `RefereeUser`, `PlayerUser` (+ роль `CAPTAIN`).
    Сервис проверяет уникальность email, умеет назначать игрока в команду
    и переключать роли `PLAYER` ↔ `CAPTAIN`.
-   Пароль сохраняется как есть: хеширование и аутентификация — задача ЛР №4.
+   Пароль хранится только в виде BCrypt-хеша: открытый пароль в базе не сохраняется.
 2. **Команды.** Название, город, тренер, капитан, состав игроков.
 3. **Турниры.** Название, вид спорта, даты, призовой фонд, судья, список команд.
    Модель определяет, открыта ли регистрация; отдельный запрос строит таблицу по завершённым
@@ -31,9 +34,13 @@
 | Spring Web MVC | REST API (модель MVC) |
 | Spring Data JPA (Hibernate) | доступ к данным |
 | PostgreSQL + PgAdmin | база данных (схема в PgAdmin) |
+| Spring Security | аутентификация HTTP Basic и проверка ролей |
+| BCrypt (`BCryptPasswordEncoder`) | хеширование паролей |
+| SLF4J + Logback | журналирование в консоль и файл |
+| springdoc-openapi 3.1.1 | Swagger UI и OpenAPI-спецификация |
 | Lombok | генерация геттеров/сеттеров DTO |
 | Jakarta Bean Validation | валидация входящих запросов |
-| JUnit 5 + Mockito | unit-тесты |
+| JUnit 5 + Mockito + spring-security-test | unit- и HTTP-тесты |
 ---
 ## Структура пакетов
 ```
@@ -62,20 +69,27 @@ com.tournament
 ├── dto                               данные запросов и ответов REST API
 │   └── user, team, tournament, match Request / Response / Filter
 ├── mapper                            преобразование сущностей в DTO
+├── security                          интеграция со Spring Security (ЛР №4)
+│   ├── TournamentUserDetailsService  загрузка пользователя по email, ROLE_ + роль
+│   ├── JsonSecurityErrorHandler      ответы 401 и 403 в формате ErrorResponse
+│   └── SecurityAccessLogFilter       журнал входов и отказов в доступе
 ├── exception                         собственные исключения, ErrorResponse и обработчик ошибок
 ├── controller                        REST-контроллеры (слой Controller модели MVC)
 │   ├── UserController                /api/users
 │   ├── TeamController                /api/teams
 │   ├── TournamentController          /api/tournaments
 │   └── MatchController               /api/matches
-└── config                            DemoDataRunner (демо-данные, профиль demo)
+└── config                            конфигурация приложения
+    ├── SecurityConfig                SecurityFilterChain: HTTP Basic, CSRF off, открытый Swagger
+    ├── SecurityBeansConfig           BCryptPasswordEncoder, @EnableMethodSecurity
+    ├── OpenApiConfig                 OpenAPI, схема basicAuth, схема ошибки ErrorResponse
+    └── DemoDataRunner                демо-данные, профиль demo
 ```
 Принцип единственной ответственности выдержан: контроллеры только маршрутизируют запросы,
 сервисы выполняют бизнес-логику, репозитории — доступ к данным, мапперы — преобразование
 в DTO.
-> В ЛР №3 добавлены собственные исключения и `@RestControllerAdvice`: ошибки API имеют
-> единый формат с кодом, подробным сообщением, деталями и подсказкой по исправлению.
-> Spring Security, роли доступа и логирование остаются темами ЛР №4 и здесь не реализуются.
+> Ошибки API имеют единый формат с кодом, подробным сообщением, деталями и подсказкой
+> по исправлению. В ЛР №4 к этому формату приведены и ответы Spring Security: 401 и 403.
 ---
 ## База данных
 Схема реализована в **PgAdmin** и продублирована скриптом [`db/schema.sql`](db/schema.sql).
@@ -148,11 +162,57 @@ com.tournament
 бизнес-правила — `422`; непредвиденная ошибка возвращает `500`. Ответ содержит `status`,
 `errorCode`, `message`, `details` и практическую подсказку в `suggestion`.
 ### Пример запроса
+Все методы REST API защищены HTTP Basic: в заголовке `Authorization` передаются
+email (он же имя входа) и пароль. Swagger UI (`/swagger-ui/index.html`) и OpenAPI JSON
+(`/v3/api-docs`) открыты без входа.
 ```bash
-curl -X POST http://127.0.0.1:8080/api/users \
+# администратор из демо-профиля, пароль pass123
+curl -u admin@tournament.com:pass123 http://127.0.0.1:8080/api/teams
+
+curl -u admin@tournament.com:pass123 -X POST http://127.0.0.1:8080/api/users \
   -H "Content-Type: application/json" \
   -d '{"email":"coach@test.com","password":"pass123","firstName":"Сергей","lastName":"Тренеров","role":"COACH"}'
 ```
+---
+## Безопасность и роли (ЛР №4)
+Вход выполняется по HTTP Basic: имя пользователя — `email`, пароль проверяется по
+BCrypt-хешу из поля `password_hash`. Аутентификация выполняется при каждом запросе,
+CSRF для REST отключён, Swagger UI и OpenAPI JSON доступны без входа, остальные методы
+требуют входа. Права объявлены над методами контроллеров аннотацией `@PreAuthorize`.
+### Матрица прав
+| Операция | ADMIN | MANAGER | REFEREE | COACH | CAPTAIN | PLAYER |
+|---|:---:|:---:|:---:|:---:|:---:|:---:|
+| Просмотр команд, турниров, матчей, состава | ✔ | ✔ | ✔ | ✔ | ✔ | ✔ |
+| Просмотр пользователя по `id` и по `email` | ✔ | ✔ | ✔ | ✔ | ✔ | ✔ |
+| Список пользователей, `/api/users/search` | ✔ | ✔ | — | — | — | — |
+| Создание, изменение, удаление пользователей | ✔ | — | — | — | — | — |
+| Создание и изменение команд и турниров | ✔ | ✔ | — | — | — | — |
+| Регистрация команды в турнире, исключение команды | ✔ | ✔ | — | — | — | — |
+| Удаление команды, турнира, матча | ✔ | — | — | — | — | — |
+| Создание и изменение матчей (расписание) | ✔ | ✔ | — | — | — | — |
+| Завершение матча (`PUT /api/matches/{id}/finish`) | ✔ | — | ✔ | — | — | — |
+| Пакетная обработка (`POST /api/matches/process`) | ✔ | — | — | — | — | — |
+| Добавление и удаление игрока состава | ✔ | — | — | ✔ | — | — |
+| Назначение капитана | ✔ | — | — | ✔ | ✔ | — |
+Отказ возвращается в том же формате `ErrorResponse`: `401` — вход не выполнен,
+`403` — роли не хватает. Пароли и заголовок `Authorization` в лог не попадают.
+---
+## Swagger UI
+* Swagger UI — `http://127.0.0.1:8080/swagger-ui/index.html`
+  (адрес `http://127.0.0.1:8080/swagger-ui.html` перенаправляет сюда же)
+* OpenAPI JSON — `http://127.0.0.1:8080/v3/api-docs`
+
+Методы сгруппированы по четырём контроллерам: «Пользователи», «Команды», «Турниры»,
+«Матчи». У каждого метода описаны назначение, параметры, тело запроса и все
+возвращаемые коды (200/201/204, 400, 401, 403, 404, 409, 422, 500). Чтобы выполнять
+защищённые запросы, нажмите **Authorize** и введите email и пароль пользователя.
+---
+## Логирование
+Логи пишутся через SLF4J и Logback одновременно в консоль и в файл `logs/tournament.log`
+(конфигурация — `src/main/resources/logback-spring.xml`, каталог `logs/` в `.gitignore`).
+* создание, изменение и удаление записей (сервисный слой);
+* завершение матча, пакетная обработка и имя потока для каждого матча;
+* успешные запросы к API с email и ролью пользователя, отказы 401 и 403.
 ---
 ## Запуск
 ```bash
@@ -163,7 +223,15 @@ curl -X POST http://127.0.0.1:8080/api/users \
 # 3. Заполнить БД демонстрационными данными (необязательно)
 ./mvnw spring-boot:run -Dspring-boot.run.profiles=demo
 ```
-После запуска REST API доступен по адресу `http://127.0.0.1:8080/api/...`.
+После запуска REST API доступен по адресу `http://127.0.0.1:8080/api/...`,
+Swagger UI — `http://127.0.0.1:8080/swagger-ui/index.html`, файл лога — `logs/tournament.log`.
+В демо-профиле создаются пользователи `admin@tournament.com`, `manager@tournament.com`,
+`referee@tournament.com`, `coach@tournament.com` и `player@tournament.com`
+с паролем `pass123` (в базе хранятся только BCrypt-хеши).
+
+> Если в существующей базе остались пользователи со старым паролем без хеша,
+> вход для них не сработает: нужна резервная копия и повторная загрузка демо-данных
+> (пустая учебная база + профиль `demo`).
 ---
 ## Тесты
 ```bash
@@ -182,7 +250,11 @@ curl -X POST http://127.0.0.1:8080/api/users \
 | `TournamentServiceImplTest` | CRUD турниров, регистрация команд, подсчёт очков в таблице, фильтры |
 | `MatchServiceImplTest` | CRUD матчей, завершение, правила ничьей, пакетная обработка, фильтры |
 | `GlobalExceptionHandlerTest` | соответствие типов исключений HTTP-статусам и формату ответа |
-| `*ControllerTest` | REST-маршруты, успешные ответы и обработка ошибок API |
+| `*ControllerTest` | REST-маршруты, успешные ответы и обработка ошибок API (от имени администратора) |
+| `SecurityAccessTest` | матрицу прав: 401 без входа, 403 для чужой роли, успех для разрешённой |
+| `PublicDocumentationAccessTest` | открытый Swagger/OpenAPI и защищённые методы API |
+| `TournamentUserDetailsServiceTest` | загрузку пользователя по email и преобразование роли в `ROLE_*` |
+| `PasswordHashingTest` | BCrypt-хеширование при создании и обновлении пользователя |
 | `TournamentTest` | доменную логику турнира |
 ---
 ## CI
